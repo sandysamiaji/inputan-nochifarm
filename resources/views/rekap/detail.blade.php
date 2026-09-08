@@ -1,0 +1,335 @@
+@extends('layouts.app')
+
+@section('content')
+<div class="space-y-5">
+
+    <!-- Top Navigation Header (Sesuai Mockup Layar 4) -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+            <a href="{{ route('rekap.index', ['start_date' => $startDate, 'end_date' => $endDate]) }}" class="w-9 h-9 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-maroon-800 hover:border-maroon-300 flex items-center justify-center shadow-sm transition-all active:scale-95">
+                <i data-lucide="arrow-left" class="w-5 h-5"></i>
+            </a>
+            <div>
+                <h1 class="text-lg sm:text-xl font-extrabold text-slate-800 tracking-tight">Rekap Detail</h1>
+                <p class="text-xs text-slate-400">Tabel data operasional & ekspor laporan</p>
+            </div>
+        </div>
+
+        <!-- Tombol Aksi Ekspor (Desktop Header & Print Friendly) -->
+        <div class="flex items-center gap-2">
+            <a href="{{ route('rekap.export-excel', ['tab' => $tab, 'start_date' => $startDate, 'end_date' => $endDate]) }}" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-sm transition-all active:scale-95">
+                <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                <span>Export Excel</span>
+            </a>
+            <button onclick="window.print()" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-maroon-800 hover:bg-maroon-900 text-white text-xs font-bold shadow-sm transition-all active:scale-95">
+                <i data-lucide="printer" class="w-4 h-4"></i>
+                <span>Export PDF / Cetak</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Date Filter Bar (Sesuai Mockup Layar 4) -->
+    <div class="farm-card p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-700 w-full sm:w-auto">
+            <div class="w-8 h-8 rounded-lg bg-rose-50 text-maroon-800 flex items-center justify-center shrink-0">
+                <i data-lucide="calendar-range" class="w-4 h-4"></i>
+            </div>
+            <span>Periode: <span class="text-maroon-800">{{ $formattedRange }}</span></span>
+        </div>
+
+        <form method="GET" action="{{ route('rekap.detail') }}" class="flex items-center gap-2 w-full sm:w-auto">
+            <input type="hidden" name="tab" value="{{ $tab }}">
+            <input type="date" name="start_date" value="{{ $startDate }}" class="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 bg-white">
+            <span class="text-xs text-slate-400">-</span>
+            <input type="date" name="end_date" value="{{ $endDate }}" class="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 bg-white">
+            <button type="submit" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition-all">
+                Filter
+            </button>
+        </form>
+    </div>
+
+    <!-- Sub-tabs: [Produksi] [Pakan] [Mortalitas] [Berat Badan] [Vaksin/Obat] (Sesuai Mockup Layar 4) -->
+    <div class="flex items-center overflow-x-auto no-scrollbar border-b border-slate-200 gap-2 sm:gap-4 px-1 pb-1">
+        @php
+            $tabs = [
+                'produksi' => ['label' => 'Produksi Telur', 'icon' => 'egg'],
+                'pakan' => ['label' => 'Pemakaian Pakan', 'icon' => 'wheat'],
+                'mortalitas' => ['label' => 'Mortalitas', 'icon' => 'alert-triangle'],
+                'bobot' => ['label' => 'Berat Badan', 'icon' => 'scale'],
+                'vaksin' => ['label' => 'Vaksin / Obat', 'icon' => 'syringe'],
+            ];
+        @endphp
+
+        @foreach($tabs as $key => $t)
+            <a 
+                href="{{ route('rekap.detail', ['tab' => $key, 'start_date' => $startDate, 'end_date' => $endDate]) }}" 
+                class="pb-2.5 px-3 text-xs sm:text-sm font-bold flex items-center gap-2 whitespace-nowrap transition-all relative {{ $tab === $key ? 'text-maroon-800' : 'text-slate-400 hover:text-slate-600' }}"
+            >
+                <i data-lucide="{{ $t['icon'] }}" class="w-4 h-4 {{ $tab === $key ? 'text-maroon-800' : 'text-slate-400' }}"></i>
+                <span>{{ $t['label'] }}</span>
+                @if($tab === $key)
+                    <span class="absolute bottom-0 left-0 right-0 h-0.5 bg-maroon-800 rounded-full"></span>
+                @endif
+            </a>
+        @endforeach
+    </div>
+
+    <!-- TABEL DATA SESUAI TAB AKTIF -->
+    <div class="farm-card overflow-hidden">
+        
+        <!-- 1. TABEL PRODUKSI TELUR (Sesuai Mockup Layar 4) -->
+        @if($tab === 'produksi')
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                    <thead>
+                        <tr class="bg-slate-50/80 border-b border-slate-200 text-slate-600">
+                            <th rowspan="2" class="py-3.5 px-4 font-extrabold">Tanggal</th>
+                            <th colspan="2" class="py-2.5 px-4 font-extrabold text-center border-l border-slate-200 bg-rose-50/50 text-maroon-900">
+                                Produksi Telur
+                            </th>
+                            <th colspan="2" class="py-2.5 px-4 font-extrabold text-center border-l border-slate-200 bg-slate-100/60 text-slate-700 hidden sm:table-cell">
+                                Kondisi Telur
+                            </th>
+                        </tr>
+                        <tr class="bg-slate-50/80 border-b border-slate-200 text-[11px] font-bold text-slate-500">
+                            <th class="py-2 px-4 text-center border-l border-slate-200 text-maroon-800">Peti</th>
+                            <th class="py-2 px-4 text-center text-maroon-800">Butir</th>
+                            <th class="py-2 px-4 text-center border-l border-slate-200 hidden sm:table-cell text-emerald-700">Utuh</th>
+                            <th class="py-2 px-4 text-center hidden sm:table-cell text-rose-700">Retak</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
+                        @forelse($data as $row)
+                            <tr class="hover:bg-slate-50/70 transition-colors">
+                                <td class="py-3 px-4 font-bold text-slate-800">
+                                    {{ $row['formatted_date'] }}
+                                </td>
+                                <td class="py-3 px-4 text-center font-bold text-slate-900 border-l border-slate-100">
+                                    {{ number_format($row['peti'], 0, ',', '.') }}
+                                </td>
+                                <td class="py-3 px-4 text-center font-semibold text-slate-600">
+                                    {{ number_format($row['butir'], 0, ',', '.') }}
+                                </td>
+                                <td class="py-3 px-4 text-center text-emerald-600 border-l border-slate-100 hidden sm:table-cell">
+                                    {{ number_format($row['good'], 0, ',', '.') }}
+                                </td>
+                                <td class="py-3 px-4 text-center text-rose-600 hidden sm:table-cell">
+                                    {{ number_format($row['broken'], 0, ',', '.') }}
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="py-10 text-center text-slate-400">
+                                    Tidak ada data produksi telur pada periode ini.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                    <!-- Footer Baris Total (Sesuai Mockup Layar 4) -->
+                    @if(count($data) > 0)
+                        <tfoot>
+                            <tr class="bg-rose-50/80 border-t-2 border-maroon-800/30 text-xs sm:text-sm font-extrabold text-maroon-950">
+                                <td class="py-3.5 px-4 font-black">Total</td>
+                                <td class="py-3.5 px-4 text-center font-black text-maroon-900 border-l border-rose-200">
+                                    {{ number_format($summary['total_peti'], 0, ',', '.') }}
+                                </td>
+                                <td class="py-3.5 px-4 text-center font-black text-maroon-900">
+                                    {{ number_format($summary['total_butir'], 0, ',', '.') }}
+                                </td>
+                                <td class="py-3.5 px-4 text-center text-emerald-800 border-l border-rose-200 hidden sm:table-cell">
+                                    {{ number_format($summary['total_butir'] - $summary['total_broken'], 0, ',', '.') }}
+                                </td>
+                                <td class="py-3.5 px-4 text-center text-rose-800 hidden sm:table-cell">
+                                    {{ number_format($summary['total_broken'], 0, ',', '.') }}
+                                </td>
+                            </tr>
+                        </tfoot>
+                    @endif
+                </table>
+            </div>
+
+        <!-- 2. TABEL PEMAKAIAN PAKAN -->
+        @elseif($tab === 'pakan')
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                    <thead>
+                        <tr class="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-extrabold">
+                            <th class="py-3.5 px-4">Tanggal & Waktu</th>
+                            <th class="py-3.5 px-4">Waktu Pakan</th>
+                            <th class="py-3.5 px-4">Jenis Pakan</th>
+                            <th class="py-3.5 px-4 text-right">Jumlah (Kg)</th>
+                            <th class="py-3.5 px-4">Kandang / Blok</th>
+                            <th class="py-3.5 px-4">Petugas</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
+                        @forelse($data as $r)
+                            <tr class="hover:bg-slate-50/70 transition-colors">
+                                <td class="py-3 px-4 font-bold text-slate-800">
+                                    {{ \Carbon\Carbon::parse($r->date)->translatedFormat('d M Y') }}
+                                    <span class="text-[11px] text-slate-400 block font-normal">{{ $r->time ? substr($r->time, 0, 5) : '-' }}</span>
+                                </td>
+                                <td class="py-3 px-4">{{ $r->feeding_time ?? 'Pagi' }}</td>
+                                <td class="py-3 px-4 font-bold text-slate-900">{{ $r->feed_name }}</td>
+                                <td class="py-3 px-4 text-right font-extrabold text-emerald-700">
+                                    {{ number_format($r->quantity_kg, 2, ',', '.') }} Kg
+                                </td>
+                                <td class="py-3 px-4">{{ $r->coop ? $r->coop->name : 'Semua Blok' }}</td>
+                                <td class="py-3 px-4 text-slate-500">{{ $r->user ? $r->user->name : 'Petugas' }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" class="py-10 text-center text-slate-400">Tidak ada data pakan pada periode ini.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                    @if(count($data) > 0)
+                        <tfoot>
+                            <tr class="bg-emerald-50/80 border-t-2 border-emerald-300 text-xs sm:text-sm font-extrabold text-emerald-950">
+                                <td colspan="3" class="py-3.5 px-4 font-black">Total Pemakaian Pakan</td>
+                                <td class="py-3.5 px-4 text-right font-black text-emerald-900">
+                                    {{ number_format($summary['total_kg'], 2, ',', '.') }} Kg
+                                </td>
+                                <td colspan="2" class="py-3.5 px-4"></td>
+                            </tr>
+                        </tfoot>
+                    @endif
+                </table>
+            </div>
+
+        <!-- 3. TABEL MORTALITAS -->
+        @elseif($tab === 'mortalitas')
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                    <thead>
+                        <tr class="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-extrabold">
+                            <th class="py-3.5 px-4">Tanggal</th>
+                            <th class="py-3.5 px-4">Waktu</th>
+                            <th class="py-3.5 px-4 text-right">Kematian (Ekor)</th>
+                            <th class="py-3.5 px-4">Penyebab / Keterangan</th>
+                            <th class="py-3.5 px-4">Kandang</th>
+                            <th class="py-3.5 px-4">Petugas</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
+                        @forelse($data as $r)
+                            <tr class="hover:bg-slate-50/70 transition-colors">
+                                <td class="py-3 px-4 font-bold text-slate-800">{{ \Carbon\Carbon::parse($r->date)->translatedFormat('d M Y') }}</td>
+                                <td class="py-3 px-4 text-slate-400">{{ $r->time ? substr($r->time, 0, 5) : '-' }}</td>
+                                <td class="py-3 px-4 text-right font-extrabold text-rose-700">{{ $r->count }} Ekor</td>
+                                <td class="py-3 px-4 text-slate-600">{{ $r->cause ?? '-' }}</td>
+                                <td class="py-3 px-4">{{ $r->coop ? $r->coop->name : '-' }}</td>
+                                <td class="py-3 px-4 text-slate-500">{{ $r->user ? $r->user->name : 'Petugas' }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" class="py-10 text-center text-slate-400">Tidak ada data mortalitas pada periode ini.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                    @if(count($data) > 0)
+                        <tfoot>
+                            <tr class="bg-rose-50/80 border-t-2 border-rose-300 text-xs sm:text-sm font-extrabold text-rose-950">
+                                <td colspan="2" class="py-3.5 px-4 font-black">Total Kematian</td>
+                                <td class="py-3.5 px-4 text-right font-black text-rose-900">{{ $summary['total_ekor'] }} Ekor</td>
+                                <td colspan="3" class="py-3.5 px-4"></td>
+                            </tr>
+                        </tfoot>
+                    @endif
+                </table>
+            </div>
+
+        <!-- 4. TABEL BERAT BADAN -->
+        @elseif($tab === 'bobot')
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                    <thead>
+                        <tr class="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-extrabold">
+                            <th class="py-3.5 px-4">Tanggal</th>
+                            <th class="py-3.5 px-4">Kandang</th>
+                            <th class="py-3.5 px-4 text-right">Rata-rata Bobot</th>
+                            <th class="py-3.5 px-4 text-right">Sampel (Ekor)</th>
+                            <th class="py-3.5 px-4 text-right">Keseragaman</th>
+                            <th class="py-3.5 px-4">Umur Ayam</th>
+                            <th class="py-3.5 px-4">Catatan</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
+                        @forelse($data as $r)
+                            <tr class="hover:bg-slate-50/70 transition-colors">
+                                <td class="py-3 px-4 font-bold text-slate-800">{{ \Carbon\Carbon::parse($r->date)->translatedFormat('d M Y') }}</td>
+                                <td class="py-3 px-4">{{ $r->coop ? $r->coop->name : '-' }}</td>
+                                <td class="py-3 px-4 text-right font-extrabold text-blue-700">{{ number_format($r->average_weight_kg, 3, ',', '.') }} Kg</td>
+                                <td class="py-3 px-4 text-right">{{ $r->sample_count }}</td>
+                                <td class="py-3 px-4 text-right font-bold text-slate-900">{{ number_format($r->uniformity_percentage, 1, ',', '.') }}%</td>
+                                <td class="py-3 px-4 text-slate-600">{{ $r->age_weeks }} Minggu</td>
+                                <td class="py-3 px-4 text-slate-400">{{ $r->notes ?? '-' }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" class="py-10 text-center text-slate-400">Tidak ada sampling timbang bobot pada periode ini.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+        <!-- 5. TABEL VAKSIN / OBAT -->
+        @elseif($tab === 'vaksin')
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                    <thead>
+                        <tr class="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-extrabold">
+                            <th class="py-3.5 px-4">Tanggal & Waktu</th>
+                            <th class="py-3.5 px-4">Jenis</th>
+                            <th class="py-3.5 px-4">Nama Obat / Vaksin</th>
+                            <th class="py-3.5 px-4">Dosis</th>
+                            <th class="py-3.5 px-4">Metode Pemberian</th>
+                            <th class="py-3.5 px-4">Kandang</th>
+                            <th class="py-3.5 px-4">Catatan</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
+                        @forelse($data as $r)
+                            <tr class="hover:bg-slate-50/70 transition-colors">
+                                <td class="py-3 px-4 font-bold text-slate-800">
+                                    {{ \Carbon\Carbon::parse($r->date)->translatedFormat('d M Y') }}
+                                    <span class="text-[11px] text-slate-400 block font-normal">{{ $r->time ? substr($r->time, 0, 5) : '-' }}</span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-purple-100 text-purple-800">
+                                        {{ $r->type }}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4 font-bold text-slate-900">{{ $r->medicine_name }}</td>
+                                <td class="py-3 px-4">{{ $r->dosage ?? '-' }}</td>
+                                <td class="py-3 px-4">{{ $r->application_method ?? '-' }}</td>
+                                <td class="py-3 px-4">{{ $r->coop ? $r->coop->name : '-' }}</td>
+                                <td class="py-3 px-4 text-slate-400">{{ $r->notes ?? '-' }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" class="py-10 text-center text-slate-400">Tidak ada kegiatan vaksinasi/obat pada periode ini.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        @endif
+
+    </div>
+
+    <!-- Tombol Download / Ekspor di Bawah (Sesuai Mockup Layar 4) -->
+    <div class="flex flex-col sm:flex-row items-center justify-end gap-3 pt-2">
+        <a href="{{ route('rekap.export-excel', ['tab' => $tab, 'start_date' => $startDate, 'end_date' => $endDate]) }}" class="w-full sm:w-auto px-5 py-3 rounded-xl bg-white border-2 border-emerald-600 hover:bg-emerald-50 text-emerald-800 font-bold text-xs sm:text-sm shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2">
+            <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i>
+            <span>Export Excel</span>
+        </a>
+        <button onclick="window.print()" class="w-full sm:w-auto px-5 py-3 rounded-xl bg-white border-2 border-maroon-800 hover:bg-rose-50 text-maroon-800 font-bold text-xs sm:text-sm shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2">
+            <i data-lucide="printer" class="w-4 h-4 text-maroon-800"></i>
+            <span>Export PDF</span>
+        </button>
+    </div>
+
+</div>
+@endsection

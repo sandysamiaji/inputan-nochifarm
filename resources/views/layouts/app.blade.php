@@ -43,6 +43,9 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
+    <!-- Chart.js CDN for Analytics & Trends -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
         body {
             font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -130,15 +133,15 @@
 
                 <!-- Desktop Navigation Links (Hidden on Mobile, Visible on Desktop md:) -->
                 <nav class="hidden md:flex items-center gap-1.5 bg-black/15 p-1 rounded-xl backdrop-blur-sm border border-white/10">
-                    <a href="{{ route('dashboard') }}" class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white text-maroon-900 shadow-sm transition-all">
+                    <a href="{{ route('dashboard') }}" class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold {{ request()->routeIs('dashboard') ? 'bg-white text-maroon-900 shadow-sm' : 'text-rose-100 hover:text-white hover:bg-white/10' }} transition-all">
                         <i data-lucide="home" class="w-4 h-4"></i>
                         <span>Dashboard</span>
                     </a>
-                    <a href="#gudang" onclick="showInfoToast('Modul Gudang: Memantau stok telur dan pakan dari input kandang vs penjualan nochifram')" class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-rose-100 hover:text-white hover:bg-white/10 transition-all">
+                    <a href="{{ route('warehouse.index') }}" class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold {{ request()->routeIs('warehouse.*') ? 'bg-white text-maroon-900 shadow-sm' : 'text-rose-100 hover:text-white hover:bg-white/10' }} transition-all">
                         <i data-lucide="warehouse" class="w-4 h-4"></i>
                         <span>Gudang</span>
                     </a>
-                    <a href="#rekap" onclick="showInfoToast('Modul Rekap: Rekapitulasi harian, mingguan, bulanan & ekspor data')" class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-rose-100 hover:text-white hover:bg-white/10 transition-all">
+                    <a href="{{ route('rekap.index') }}" class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold {{ request()->routeIs('rekap.*') ? 'bg-white text-maroon-900 shadow-sm' : 'text-rose-100 hover:text-white hover:bg-white/10' }} transition-all">
                         <i data-lucide="clipboard-list" class="w-4 h-4"></i>
                         <span>Rekap</span>
                     </a>
@@ -199,23 +202,35 @@
     <nav class="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 shadow-2xl">
         <div class="flex items-center justify-around py-2 px-1">
             <!-- 1. Dashboard -->
-            <a href="{{ route('dashboard') }}" class="flex flex-col items-center justify-center w-16 py-1 text-maroon-800 font-bold transition-transform active:scale-90">
+            <a href="{{ route('dashboard') }}" class="flex flex-col items-center justify-center w-16 py-1 {{ request()->routeIs('dashboard') ? 'text-maroon-800 font-bold' : 'text-slate-500 hover:text-maroon-700 font-medium' }} transition-transform active:scale-90">
                 <div class="relative">
                     <i data-lucide="home" class="w-6 h-6 stroke-[2.2]"></i>
-                    <span class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-1 bg-maroon-800 rounded-full"></span>
+                    @if(request()->routeIs('dashboard'))
+                        <span class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-1 bg-maroon-800 rounded-full"></span>
+                    @endif
                 </div>
                 <span class="text-[11px] mt-1">Dashboard</span>
             </a>
 
             <!-- 2. Gudang -->
-            <a href="#gudang" onclick="showInfoToast('Fitur Gudang: Menampilkan stok telur & pakan dari kandang vs penjualan nochifram')" class="flex flex-col items-center justify-center w-16 py-1 text-slate-500 hover:text-maroon-700 font-medium transition-transform active:scale-90">
-                <i data-lucide="warehouse" class="w-6 h-6 stroke-[1.8]"></i>
+            <a href="{{ route('warehouse.index') }}" class="flex flex-col items-center justify-center w-16 py-1 {{ request()->routeIs('warehouse.*') ? 'text-maroon-800 font-bold' : 'text-slate-500 hover:text-maroon-700 font-medium' }} transition-transform active:scale-90">
+                <div class="relative">
+                    <i data-lucide="warehouse" class="w-6 h-6 stroke-[2.2]"></i>
+                    @if(request()->routeIs('warehouse.*'))
+                        <span class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-1 bg-maroon-800 rounded-full"></span>
+                    @endif
+                </div>
                 <span class="text-[11px] mt-1">Gudang</span>
             </a>
 
             <!-- 3. Rekap -->
-            <a href="#rekap" onclick="showInfoToast('Fitur Rekap: Rekapitulasi data produksi, pakan, dan mortalitas dengan filter periode')" class="flex flex-col items-center justify-center w-16 py-1 text-slate-500 hover:text-maroon-700 font-medium transition-transform active:scale-90">
-                <i data-lucide="clipboard-list" class="w-6 h-6 stroke-[1.8]"></i>
+            <a href="{{ route('rekap.index') }}" class="flex flex-col items-center justify-center w-16 py-1 {{ request()->routeIs('rekap.*') ? 'text-maroon-800 font-bold' : 'text-slate-500 hover:text-maroon-700 font-medium' }} transition-transform active:scale-90">
+                <div class="relative">
+                    <i data-lucide="clipboard-list" class="w-6 h-6 stroke-[2.2]"></i>
+                    @if(request()->routeIs('rekap.*'))
+                        <span class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-1 bg-maroon-800 rounded-full"></span>
+                    @endif
+                </div>
                 <span class="text-[11px] mt-1">Rekap</span>
             </a>
 
