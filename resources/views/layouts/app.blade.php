@@ -145,7 +145,7 @@
                         <i data-lucide="clipboard-list" class="w-4 h-4"></i>
                         <span>Rekap</span>
                     </a>
-                    <a href="#master" onclick="showInfoToast('Modul Master: Pengaturan Klotter, Blok, Standar Bobot & Pakan')" class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-rose-100 hover:text-white hover:bg-white/10 transition-all">
+                    <a href="{{ route('master.index') }}" class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold {{ request()->routeIs('master.*') ? 'bg-white text-maroon-900 shadow-sm' : 'text-rose-100 hover:text-white hover:bg-white/10' }} transition-all">
                         <i data-lucide="layout-grid" class="w-4 h-4"></i>
                         <span>Master</span>
                     </a>
@@ -161,15 +161,15 @@
                     </button>
 
                     <!-- User Profile Info (Shown on Desktop) -->
-                    <div class="hidden sm:flex items-center gap-2.5 pl-2 border-l border-white/20">
+                    <a href="{{ route('profile.index') }}" class="hidden sm:flex items-center gap-2.5 pl-2 border-l border-white/20 hover:opacity-90 transition-opacity">
                         <div class="w-9 h-9 rounded-xl bg-rose-950/60 border border-white/20 flex items-center justify-center text-white font-bold text-xs uppercase shadow-inner">
                             <i data-lucide="user-check" class="w-4 h-4 text-rose-200"></i>
                         </div>
                         <div class="text-left leading-tight">
-                            <span class="text-xs font-bold text-white block">{{ $user ? $user->name : 'Petugas' }}</span>
+                            <span class="text-xs font-bold text-white block">{{ isset($user) && $user ? $user->name : (auth()->user()->name ?? 'Petugas') }}</span>
                             <span class="text-[10px] text-rose-200 font-medium block">Petugas Kandang</span>
                         </div>
-                    </div>
+                    </a>
 
                 </div>
             </div>
@@ -235,14 +235,24 @@
             </a>
 
             <!-- 4. Master -->
-            <a href="#master" onclick="showInfoToast('Fitur Master: Manajemen Data Klotter, Blok, Standar Produksi & Pakan')" class="flex flex-col items-center justify-center w-16 py-1 text-slate-500 hover:text-maroon-700 font-medium transition-transform active:scale-90">
-                <i data-lucide="layout-grid" class="w-6 h-6 stroke-[1.8]"></i>
+            <a href="{{ route('master.index') }}" class="flex flex-col items-center justify-center w-16 py-1 {{ request()->routeIs('master.*') ? 'text-maroon-800 font-bold' : 'text-slate-500 hover:text-maroon-700 font-medium' }} transition-transform active:scale-90">
+                <div class="relative">
+                    <i data-lucide="layout-grid" class="w-6 h-6 stroke-[2.2]"></i>
+                    @if(request()->routeIs('master.*'))
+                        <span class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-1 bg-maroon-800 rounded-full"></span>
+                    @endif
+                </div>
                 <span class="text-[11px] mt-1">Master</span>
             </a>
 
             <!-- 5. Profil -->
-            <a href="#profil" onclick="showInfoToast('Profil Petugas Kandang (Terkoneksi ke sistem Nochi Farm)')" class="flex flex-col items-center justify-center w-16 py-1 text-slate-500 hover:text-maroon-700 font-medium transition-transform active:scale-90">
-                <i data-lucide="user" class="w-6 h-6 stroke-[1.8]"></i>
+            <a href="{{ route('profile.index') }}" class="flex flex-col items-center justify-center w-16 py-1 {{ request()->routeIs('profile.*') ? 'text-maroon-800 font-bold' : 'text-slate-500 hover:text-maroon-700 font-medium' }} transition-transform active:scale-90">
+                <div class="relative">
+                    <i data-lucide="user" class="w-6 h-6 stroke-[2.2]"></i>
+                    @if(request()->routeIs('profile.*'))
+                        <span class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-1 bg-maroon-800 rounded-full"></span>
+                    @endif
+                </div>
                 <span class="text-[11px] mt-1">Profil</span>
             </a>
         </div>

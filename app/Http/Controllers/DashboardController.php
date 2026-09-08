@@ -177,6 +177,17 @@ class DashboardController extends Controller
         $totalActiveChickens = (int) $coops->sum('active_chickens');
         $totalCoopsCount = $coops->count();
 
+        // 9. Pesan Motivasi & Informasi Kondisi Ayam dari Master Settings
+        $settingRows = \Illuminate\Support\Facades\DB::table('settings')->whereIn('key', [
+            'dashboard_motivation_message',
+            'dashboard_chicken_status_message',
+            'dashboard_info_active'
+        ])->pluck('value', 'key');
+
+        $motivationMsg = $settingRows['dashboard_motivation_message'] ?? 'Semangat bekerja dan tetap jaga kebersihan serta performa kandang hari ini!';
+        $chickenStatusMsg = $settingRows['dashboard_chicken_status_message'] ?? 'Kondisi ayam saat ini memasuki umur minggu ke-21 (Masa Awal Bertelur Produktif / Subur). Pastikan pencahayaan dan asupan kalsium optimal.';
+        $isInfoActive = ($settingRows['dashboard_info_active'] ?? '1') === '1';
+
         return view('dashboard', compact(
             'selectedDate',
             'greeting',
@@ -202,7 +213,10 @@ class DashboardController extends Controller
             'currentFeedStockKg',
             'totalFeedUsedAllTime',
             'totalActiveChickens',
-            'totalCoopsCount'
+            'totalCoopsCount',
+            'motivationMsg',
+            'chickenStatusMsg',
+            'isInfoActive'
         ));
     }
 

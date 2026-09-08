@@ -27,9 +27,18 @@
                 <h2 class="text-lg sm:text-xl md:text-2xl font-black text-slate-900 flex items-center gap-2">
                     {{ $greeting }}, {{ $user ? $user->name : 'Petugas' }} 👋
                 </h2>
-                <p class="text-xs sm:text-sm text-slate-500 font-medium">
-                    Semangat bekerja dan tetap jaga kebersihan serta performa kandang hari ini!
+                <p class="text-xs sm:text-sm text-slate-600 font-medium">
+                    {{ $motivationMsg }}
                 </p>
+                @if($isInfoActive && !empty($chickenStatusMsg))
+                    <div class="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200/80 text-amber-900 text-xs font-semibold shadow-xs">
+                        <span class="flex h-2 w-2 relative shrink-0">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                        </span>
+                        <span>{{ $chickenStatusMsg }}</span>
+                    </div>
+                @endif
             </div>
 
             <!-- Kartu Penanggalan Kalender & Filter Cepat -->
