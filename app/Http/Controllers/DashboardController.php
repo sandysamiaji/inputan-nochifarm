@@ -1,0 +1,426 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Flock;
+use App\Models\Coop;
+use App\Models\EggProduction;
+use App\Models\FeedConsumption;
+use App\Models\Mortality;
+use App\Models\WeightSample;
+use App\Models\HealthTreatment;
+use App\Models\User;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
+
+class DashboardController extends Controller
+{
+    /**
+     * Menampilkan halaman Dashboard utama Nochi Farm Input
+     */
+    public function index(Request $request)
+    {
+        $selectedDate = $request->query('date', Carbon::today()->toDateString());
+        $carbonDate = Carbon::parse($selectedDate);
+
+        // Ucapan waktu Indonesia
+        $hour = Carbon::now()->hour;
+        if ($hour >= 4 && $hour < 11) {
+            $greeting = 'Selamat pagi';
+        } elseif ($hour >= 11 && $hour < 15) {
+            $greeting = 'Selamat siang';
+        } elseif ($hour >= 15 && $hour < 18) {
+            $greeting = 'Selamat sore';
+        } else {
+            $greeting = 'Selamat malam';
+        }
+
+        // Petugas aktif atau Petugas default
+        $user = Auth::user();
+        if (!$user) {
+            $user = User::where('role', 'user')->orWhere('username', 'petugas')->first() ?? User::first();
+        }
+
+        // Format tanggal Indonesia
+        $hariIndonesia = [
+            'Sunday' => 'Minggu', 'Monday' => 'Senin', 'Tuesday' => 'Selasa',
+            'Wednesday' => 'Rabu', 'Thursday' => 'Kamis', 'Friday' => 'Jumat', 'Saturday' => 'Sabtu'
+        ];
+        $bulanIndonesia = [
+            1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr', 5 => 'Mei', 6 => 'Jun',
+            7 => 'Jul', 8 => 'Agu', 9 => 'Sep', 10 => 'Okt', 11 => 'Nov', 12 => 'Des'
+        ];
+        $bulanFullIndonesia = [
+            1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April', 5 => 'Mei', 6 => 'Juni',
+            7 => 'Juli', 8 => 'Agustus', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+        ];
+
+        $namaHari = $hariIndonesia[$carbonDate->format('l')] ?? $carbonDate->format('l');
+        $namaBulan = $bulanIndonesia[$carbonDate->month] ?? $carbonDate->format('M');
+        $namaBulanFull = $bulanFullIndonesia[$carbonDate->month] ?? $carbonDate->format('F');
+        $formattedDate = "{$carbonDate->day} {$namaBulanFull} {$carbonDate->year}";
+
+        // 1. Ringkasan Produksi Telur Hari Ini
+        $eggProdRecords = EggProduction::whereDate('date', $selectedDate)->get();
+        $totalEggCrates = (float) $eggProdRecords->sum('crates_count');
+        $totalEggCount = (int) $eggProdRecords->sum('total_eggs');
+        $brokenEggCount = (int) $eggProdRecords->sum('broken_eggs');
+        $goodEggCount = (int) $eggProdRecords->sum('good_eggs');
+
+        // 2. Ringkasan Pemakaian Pakan Hari Ini
+        $feedConsRecords = FeedConsumption::whereDate('date', $selectedDate)->get();
+        $totalFeedKg = (float) $feedConsRecords->sum('quantity_kg');
+
+        // 3. Ringkasan Mortalitas Hari Ini
+        $mortalityRecords = Mortality::whereDate('date', $selectedDate)->get();
+        $totalMortalityCount = (int) $mortalityRecords->sum('count');
+
+        // 4. Ringkasan Berat Badan Terkini
+        $latestWeight = WeightSample::whereDate('date', '<=', $selectedDate)
+            ->latest('date')
+            ->first();
+        $averageWeightKg = $latestWeight ? (float) $latestWeight->average_weight_kg : 1.620;
+
+        // 5. Ringkasan Vaksin & Obat Hari Ini
+        $healthTreatments = HealthTreatment::whereDate('date', $selectedDate)->get();
+        $totalHealthActivities = $healthTreatments->count();
+
+        // 6. Aktivitas Terakhir (Timeline Gabungan)
+        $activities = collect();
+
+        foreach ($eggProdRecords as $item) {
+            $coopName = $item->coop ? $item->coop->name : 'Kandang';
+            $timeStr = $item->time ? substr($item->time, 0, 5) : $item->created_at->format('H:i');
+            $activities->push([
+                'id' => 'egg_' . $item->id,
+                'category' => 'egg',
+                'title' => 'Produksi Telur',
+                'subtitle' => $coopName . ($item->notes ? ' • ' . $item->notes : ''),
+                'datetime' => $carbonDate->format('d/m/Y') . ' ' . $timeStr,
+                'time' => $timeStr,
+                'value' => '+' . number_format($item->crates_count, 0, ',', '.') . ' Peti',
+                'subvalue' => number_format($item->total_eggs, 0, ',', '.') . ' Butir',
+                'raw_timestamp' => $item->created_at ? $item->created_at->timestamp : strtotime($item->date . ' ' . ($item->time ?: '00:00:00')),
+            ]);
+        }
+
+        foreach ($feedConsRecords as $item) {
+            $coopName = $item->coop ? $item->coop->name : 'Kandang';
+            $timeStr = $item->time ? substr($item->time, 0, 5) : $item->created_at->format('H:i');
+            $activities->push([
+                'id' => 'feed_' . $item->id,
+                'category' => 'feed',
+                'title' => 'Pemakaian Pakan',
+                'subtitle' => $coopName . ' • ' . $item->feed_name,
+                'datetime' => $carbonDate->format('d/m/Y') . ' ' . $timeStr,
+                'time' => $timeStr,
+                'value' => '-' . number_format($item->quantity_kg, 0, ',', '.') . ' Kg',
+                'subvalue' => $item->feeding_time,
+                'raw_timestamp' => $item->created_at ? $item->created_at->timestamp : strtotime($item->date . ' ' . ($item->time ?: '00:00:00')),
+            ]);
+        }
+
+        foreach ($mortalityRecords as $item) {
+            $coopName = $item->coop ? $item->coop->name : 'Kandang';
+            $timeStr = $item->time ? substr($item->time, 0, 5) : $item->created_at->format('H:i');
+            $activities->push([
+                'id' => 'mort_' . $item->id,
+                'category' => 'mortality',
+                'title' => 'Mortalitas',
+                'subtitle' => $coopName . ($item->cause ? ' • ' . $item->cause : ''),
+                'datetime' => $carbonDate->format('d/m/Y') . ' ' . $timeStr,
+                'time' => $timeStr,
+                'value' => $item->count . ' Ekor',
+                'subvalue' => ucfirst($item->type),
+                'raw_timestamp' => $item->created_at ? $item->created_at->timestamp : strtotime($item->date . ' ' . ($item->time ?: '00:00:00')),
+            ]);
+        }
+
+        foreach ($healthTreatments as $item) {
+            $coopName = $item->coop ? $item->coop->name : 'Semua Blok';
+            $timeStr = $item->time ? substr($item->time, 0, 5) : $item->created_at->format('H:i');
+            $activities->push([
+                'id' => 'health_' . $item->id,
+                'category' => 'health',
+                'title' => ucfirst($item->type) . ' / Obat',
+                'subtitle' => $coopName . ' • ' . $item->medicine_name,
+                'datetime' => $carbonDate->format('d/m/Y') . ' ' . $timeStr,
+                'time' => $timeStr,
+                'value' => $item->dosage ?: '1 Kegiatan',
+                'subvalue' => $item->application_method,
+                'raw_timestamp' => $item->created_at ? $item->created_at->timestamp : strtotime($item->date . ' ' . ($item->time ?: '00:00:00')),
+            ]);
+        }
+
+        $activities = $activities->sortByDesc('raw_timestamp')->values();
+
+        // 7. Data Master untuk modal quick action
+        $flocks = Flock::with(['coops' => function ($q) {
+            $q->where('is_active', true);
+        }])->where('is_active', true)->get();
+
+        $coops = Coop::with('flock')->where('is_active', true)->get();
+
+        // 8. Integrasi Data Gudang & Penjualan dari nochifram
+        $totalEggProducedAllTime = (float) EggProduction::sum('crates_count');
+        $totalEggSoldAllTime = (float) \App\Models\SaleItem::where('item_name', 'like', '%Telur%')
+            ->where('unit', 'Peti')
+            ->sum('quantity');
+        $currentEggStockCrates = max(0, $totalEggProducedAllTime - $totalEggSoldAllTime);
+
+        $totalFeedUsedAllTime = (float) FeedConsumption::sum('quantity_kg');
+        // Anggap stok pakan awal / pembelian dari gudang
+        $totalFeedPurchased = 18250.0;
+        $currentFeedStockKg = max(0, $totalFeedPurchased - $totalFeedUsedAllTime);
+
+        $totalActiveChickens = (int) $coops->sum('active_chickens');
+        $totalCoopsCount = $coops->count();
+
+        return view('dashboard', compact(
+            'selectedDate',
+            'greeting',
+            'user',
+            'namaHari',
+            'namaBulan',
+            'formattedDate',
+            'carbonDate',
+            'totalEggCrates',
+            'totalEggCount',
+            'brokenEggCount',
+            'goodEggCount',
+            'totalFeedKg',
+            'totalMortalityCount',
+            'averageWeightKg',
+            'totalHealthActivities',
+            'activities',
+            'flocks',
+            'coops',
+            'totalEggProducedAllTime',
+            'totalEggSoldAllTime',
+            'currentEggStockCrates',
+            'currentFeedStockKg',
+            'totalFeedUsedAllTime',
+            'totalActiveChickens',
+            'totalCoopsCount'
+        ));
+    }
+
+    /**
+     * Simpan Produksi Telur Cepat
+     */
+    public function storeEggProduction(Request $request)
+    {
+        $validated = $request->validate([
+            'coop_id' => 'required|exists:coops,id',
+            'total_eggs' => 'required|numeric|min:1',
+            'broken_eggs' => 'nullable|numeric|min:0',
+            'crates_count' => 'nullable|numeric|min:0',
+            'date' => 'nullable|date',
+            'time' => 'nullable',
+            'notes' => 'nullable|string',
+        ]);
+
+        $coop = Coop::findOrFail($validated['coop_id']);
+        $totalEggs = (int) $validated['total_eggs'];
+        $brokenEggs = (int) ($validated['broken_eggs'] ?? 0);
+        $goodEggs = max(0, $totalEggs - $brokenEggs);
+
+        // Jika peti tidak diisi, estimasikan 25 butir per kg atau 1 peti ~ 25 butir / disesuaikan
+        $cratesCount = isset($validated['crates_count']) && $validated['crates_count'] > 0
+            ? (float) $validated['crates_count']
+            : round($totalEggs / 25, 2);
+
+        $eggProduction = EggProduction::create([
+            'flock_id' => $coop->flock_id,
+            'coop_id' => $coop->id,
+            'user_id' => Auth::id() ?? User::where('username', 'petugas')->value('id') ?? User::value('id'),
+            'date' => $validated['date'] ?? Carbon::today()->toDateString(),
+            'time' => $validated['time'] ?? Carbon::now()->format('H:i:s'),
+            'total_eggs' => $totalEggs,
+            'broken_eggs' => $brokenEggs,
+            'good_eggs' => $goodEggs,
+            'crates_count' => $cratesCount,
+            'notes' => $validated['notes'] ?? null,
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Data produksi telur berhasil disimpan!',
+                'data' => $eggProduction,
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Data produksi telur berhasil disimpan!');
+    }
+
+    /**
+     * Simpan Pemakaian Pakan Cepat
+     */
+    public function storeFeedConsumption(Request $request)
+    {
+        $validated = $request->validate([
+            'coop_id' => 'nullable|exists:coops,id',
+            'feed_name' => 'required|string',
+            'quantity_kg' => 'required|numeric|min:0.1',
+            'feeding_time' => 'nullable|string',
+            'date' => 'nullable|date',
+            'notes' => 'nullable|string',
+        ]);
+
+        $flockId = null;
+        if (!empty($validated['coop_id'])) {
+            $coop = Coop::find($validated['coop_id']);
+            $flockId = $coop ? $coop->flock_id : null;
+        }
+
+        $feed = FeedConsumption::create([
+            'flock_id' => $flockId,
+            'coop_id' => $validated['coop_id'] ?? null,
+            'user_id' => Auth::id() ?? User::where('username', 'petugas')->value('id') ?? User::value('id'),
+            'date' => $validated['date'] ?? Carbon::today()->toDateString(),
+            'time' => Carbon::now()->format('H:i:s'),
+            'feeding_time' => $validated['feeding_time'] ?? 'Pagi',
+            'feed_name' => $validated['feed_name'],
+            'quantity_kg' => $validated['quantity_kg'],
+            'notes' => $validated['notes'] ?? null,
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Data pemakaian pakan berhasil disimpan!',
+                'data' => $feed,
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Data pemakaian pakan berhasil disimpan!');
+    }
+
+    /**
+     * Simpan Mortalitas Cepat
+     */
+    public function storeMortality(Request $request)
+    {
+        $validated = $request->validate([
+            'coop_id' => 'required|exists:coops,id',
+            'count' => 'required|integer|min:1',
+            'type' => 'nullable|string',
+            'cause' => 'nullable|string',
+            'date' => 'nullable|date',
+            'notes' => 'nullable|string',
+        ]);
+
+        $coop = Coop::findOrFail($validated['coop_id']);
+
+        $mortality = Mortality::create([
+            'flock_id' => $coop->flock_id,
+            'coop_id' => $coop->id,
+            'user_id' => Auth::id() ?? User::where('username', 'petugas')->value('id') ?? User::value('id'),
+            'date' => $validated['date'] ?? Carbon::today()->toDateString(),
+            'time' => Carbon::now()->format('H:i:s'),
+            'count' => $validated['count'],
+            'type' => $validated['type'] ?? 'mati',
+            'cause' => $validated['cause'] ?? 'Wajar',
+            'notes' => $validated['notes'] ?? null,
+        ]);
+
+        // Perbarui jumlah ayam aktif di blok jika bertipe mati/afkir
+        if ($coop->active_chickens >= $validated['count']) {
+            $coop->decrement('active_chickens', $validated['count']);
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Data mortalitas berhasil dicatat!',
+                'data' => $mortality,
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Data mortalitas berhasil dicatat!');
+    }
+
+    /**
+     * Simpan Berat Badan Cepat
+     */
+    public function storeWeightSample(Request $request)
+    {
+        $validated = $request->validate([
+            'coop_id' => 'required|exists:coops,id',
+            'average_weight_kg' => 'required|numeric|min:0.1',
+            'sample_count' => 'nullable|integer|min:1',
+            'date' => 'nullable|date',
+            'notes' => 'nullable|string',
+        ]);
+
+        $coop = Coop::findOrFail($validated['coop_id']);
+
+        $weight = WeightSample::create([
+            'flock_id' => $coop->flock_id,
+            'coop_id' => $coop->id,
+            'user_id' => Auth::id() ?? User::where('username', 'petugas')->value('id') ?? User::value('id'),
+            'date' => $validated['date'] ?? Carbon::today()->toDateString(),
+            'sample_count' => $validated['sample_count'] ?? 50,
+            'average_weight_kg' => $validated['average_weight_kg'],
+            'age_weeks' => $coop->chicken_age_weeks,
+            'notes' => $validated['notes'] ?? null,
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Data berat badan berhasil disimpan!',
+                'data' => $weight,
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Data berat badan berhasil disimpan!');
+    }
+
+    /**
+     * Simpan Vaksin & Obat Cepat
+     */
+    public function storeHealthTreatment(Request $request)
+    {
+        $validated = $request->validate([
+            'coop_id' => 'nullable|exists:coops,id',
+            'medicine_name' => 'required|string',
+            'type' => 'nullable|string',
+            'dosage' => 'nullable|string',
+            'application_method' => 'nullable|string',
+            'date' => 'nullable|date',
+            'notes' => 'nullable|string',
+        ]);
+
+        $flockId = null;
+        if (!empty($validated['coop_id'])) {
+            $coop = Coop::find($validated['coop_id']);
+            $flockId = $coop ? $coop->flock_id : null;
+        }
+
+        $health = HealthTreatment::create([
+            'flock_id' => $flockId,
+            'coop_id' => $validated['coop_id'] ?? null,
+            'user_id' => Auth::id() ?? User::where('username', 'petugas')->value('id') ?? User::value('id'),
+            'date' => $validated['date'] ?? Carbon::today()->toDateString(),
+            'time' => Carbon::now()->format('H:i:s'),
+            'type' => $validated['type'] ?? 'vaksin',
+            'medicine_name' => $validated['medicine_name'],
+            'dosage' => $validated['dosage'] ?? '1 Botol',
+            'application_method' => $validated['application_method'] ?? 'Air Minum',
+            'notes' => $validated['notes'] ?? null,
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Data vaksin/obat berhasil disimpan!',
+                'data' => $health,
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Data vaksin/obat berhasil disimpan!');
+    }
+}
