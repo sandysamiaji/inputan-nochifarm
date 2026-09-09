@@ -6,6 +6,9 @@ use Illuminate\Http\Request;
 use App\Models\FarmStock;
 use App\Models\User;
 use App\Models\Coop;
+use App\Models\EggProduction;
+use App\Models\FeedConsumption;
+use App\Services\OutboundIntegrationService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 
@@ -32,34 +35,45 @@ class WarehouseController extends Controller
     {
         $user = Auth::user() ?? User::where('role', 'user')->orWhere('username', 'petugas')->first() ?? User::first();
 
-        // 1. Gudang Telur (Satuan: Peti)
-        $telurMasuk = (float) FarmStock::where('category', 'telur')->where('type', 'masuk')->sum('quantity');
-        $telurKeluar = (float) FarmStock::where('category', 'telur')->where('type', 'keluar')->sum('quantity');
-        $telurStok = max(0, $telurMasuk - $telurKeluar);
+        // 1. Gudang Telur (Terintegrasi Penjualan nochifram)
+        $eggSummary = OutboundIntegrationService::getEggOutboundSummary();
+        $telurMasuk = $eggSummary['total_produced_crates'];
+        $telurKeluar = $eggSummary['total_keluar_peti'];
+        $telurStok = $eggSummary['current_stock_peti'];
+        $telurPetiSold = $eggSummary['peti_sold'];
+        $telurKgSold = $eggSummary['kg_sold'];
+        $telurRevenue = $eggSummary['total_revenue'];
 
-        // 2. Gudang Pakan (Satuan: Kg)
-        $pakanMasuk = (float) FarmStock::where('category', 'pakan')->where('type', 'masuk')->sum('quantity');
-        $pakanKeluar = (float) FarmStock::where('category', 'pakan')->where('type', 'keluar')->sum('quantity');
-        $pakanStok = max(0, $pakanMasuk - $pakanKeluar);
+        // 2. Gudang Pakan (Terintegrasi Konsumsi Kandang & Penjualan Luar)
+        $feedSummary = OutboundIntegrationService::getFeedOutboundSummary();
+        $pakanMasuk = $feedSummary['purchased_kg'];
+        $pakanKeluar = $feedSummary['total_keluar_kg'];
+        $pakanStok = $feedSummary['current_stock_kg'];
+        $pakanKarungSold = $feedSummary['karung_sold'];
+        $pakanConsumptionKg = $feedSummary['consumption_kg'];
+        $pakanRevenue = $feedSummary['total_revenue'];
 
         // 3. Gudang Obat, Vaksin & Vitamin (Satuan: Item / Botol)
         $obatMasuk = (float) FarmStock::whereIn('category', ['obat', 'vaksin', 'vitamin'])->where('type', 'masuk')->sum('quantity');
         $obatKeluar = (float) FarmStock::whereIn('category', ['obat', 'vaksin', 'vitamin'])->where('type', 'keluar')->sum('quantity');
         $obatStok = max(0, $obatMasuk - $obatKeluar);
 
-        // Mutasi stok terbaru
+        // Mutasi stok internal terbaru
         $recentTransactions = FarmStock::with('user')
             ->orderBy('date', 'desc')
             ->orderBy('created_at', 'desc')
             ->take(8)
             ->get();
 
+        // Transaksi penjualan terbaru dari nochifram
+        $recentSales = OutboundIntegrationService::getSalesTransactions(null, null, null, 6);
+
         return view('warehouse.index', compact(
             'user',
-            'telurMasuk', 'telurKeluar', 'telurStok',
-            'pakanMasuk', 'pakanKeluar', 'pakanStok',
+            'telurMasuk', 'telurKeluar', 'telurStok', 'telurPetiSold', 'telurKgSold', 'telurRevenue',
+            'pakanMasuk', 'pakanKeluar', 'pakanStok', 'pakanKarungSold', 'pakanConsumptionKg', 'pakanRevenue',
             'obatMasuk', 'obatKeluar', 'obatStok',
-            'recentTransactions'
+            'recentTransactions', 'recentSales'
         ));
     }
 
@@ -90,15 +104,28 @@ class WarehouseController extends Controller
 
         $items = $query->orderBy('date', 'desc')->orderBy('created_at', 'desc')->paginate(15)->withQueryString();
 
-        // Ringkasan Telur
-        $totalMasuk = (float) FarmStock::where('category', 'telur')->where('type', 'masuk')->sum('quantity');
-        $totalKeluar = (float) FarmStock::where('category', 'telur')->where('type', 'keluar')->sum('quantity');
-        $stokSaatIni = max(0, $totalMasuk - $totalKeluar);
+        // Ringkasan Telur Terintegrasi Penjualan nochifram
+        $eggSummary = OutboundIntegrationService::getEggOutboundSummary();
+        $totalMasuk = $eggSummary['total_produced_crates'];
+        $totalKeluar = $eggSummary['total_keluar_peti'];
+        $stokSaatIni = $eggSummary['current_stock_peti'];
+        $petiSold = $eggSummary['peti_sold'];
+        $kgSold = $eggSummary['kg_sold'];
+        $totalRevenue = $eggSummary['total_revenue'];
+        $transactionCount = $eggSummary['transaction_count'];
+        $totalEggsCount = $eggSummary['total_produced_eggs'];
+
+        // Data Penjualan Telur dari aplikasi nochifram
+        $salesList = OutboundIntegrationService::getSalesTransactions('telur', null, null, 30);
+        $tripList = OutboundIntegrationService::getTripOutbounds('telur', 10);
 
         $coops = Coop::where('is_active', true)->get();
 
         return view('warehouse.telur', compact(
-            'user', 'items', 'tab', 'search', 'totalMasuk', 'totalKeluar', 'stokSaatIni', 'coops'
+            'user', 'items', 'tab', 'search', 
+            'totalMasuk', 'totalKeluar', 'stokSaatIni', 
+            'petiSold', 'kgSold', 'totalRevenue', 'transactionCount', 'totalEggsCount',
+            'salesList', 'tripList', 'coops'
         ));
     }
 
@@ -129,15 +156,29 @@ class WarehouseController extends Controller
 
         $items = $query->orderBy('date', 'desc')->orderBy('created_at', 'desc')->paginate(15)->withQueryString();
 
-        // Ringkasan Pakan
-        $totalMasuk = (float) FarmStock::where('category', 'pakan')->where('type', 'masuk')->sum('quantity');
-        $totalKeluar = (float) FarmStock::where('category', 'pakan')->where('type', 'keluar')->sum('quantity');
-        $stokSaatIni = max(0, $totalMasuk - $totalKeluar);
+        // Ringkasan Pakan Terintegrasi Konsumsi Kandang & Penjualan Luar nochifram
+        $feedSummary = OutboundIntegrationService::getFeedOutboundSummary();
+        $totalMasuk = $feedSummary['purchased_kg'];
+        $totalKeluar = $feedSummary['total_keluar_kg'];
+        $stokSaatIni = $feedSummary['current_stock_kg'];
+        $karungSold = $feedSummary['karung_sold'];
+        $kgSold = $feedSummary['kg_sold'];
+        $soldRevenue = $feedSummary['total_revenue'];
+        $consumptionKg = $feedSummary['consumption_kg'];
+        $consumptionKarung = $feedSummary['consumption_karung'];
+        $purchasedKarung = $feedSummary['purchased_karung'];
+
+        // Data Penjualan Pakan & Trip Pakan dari nochifram
+        $salesList = OutboundIntegrationService::getSalesTransactions('pakan', null, null, 20);
+        $tripList = OutboundIntegrationService::getTripOutbounds('pakan', 10);
 
         $coops = Coop::where('is_active', true)->get();
 
         return view('warehouse.pakan', compact(
-            'user', 'items', 'tab', 'search', 'totalMasuk', 'totalKeluar', 'stokSaatIni', 'coops'
+            'user', 'items', 'tab', 'search', 
+            'totalMasuk', 'totalKeluar', 'stokSaatIni', 
+            'karungSold', 'kgSold', 'soldRevenue', 'consumptionKg', 'consumptionKarung', 'purchasedKarung',
+            'salesList', 'tripList', 'coops'
         ));
     }
 

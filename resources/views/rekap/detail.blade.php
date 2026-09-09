@@ -57,6 +57,7 @@
                 'mortalitas' => ['label' => 'Mortalitas', 'icon' => 'alert-triangle'],
                 'bobot' => ['label' => 'Berat Badan', 'icon' => 'scale'],
                 'vaksin' => ['label' => 'Vaksin / Obat', 'icon' => 'syringe'],
+                'penjualan' => ['label' => 'Barang Keluar (nochifram)', 'icon' => 'shopping-bag'],
             ];
         @endphp
 
@@ -313,6 +314,102 @@
                             </tr>
                         @endforelse
                     </tbody>
+                </table>
+            </div>
+
+        <!-- 6. TABEL BARANG KELUAR & PENJUALAN (DARI NOCHIFRAM) -->
+        @elseif($tab === 'penjualan')
+            <!-- Metrik Ringkasan Barang Keluar -->
+            <div class="p-4 bg-gradient-to-r from-rose-50 via-white to-emerald-50 border-b border-slate-200">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-xs">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase block">Telur Terjual (Peti)</span>
+                        <span class="text-base sm:text-lg font-black text-maroon-800">{{ number_format($summary['total_peti_telur'], 0, ',', '.') }} Peti</span>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-xs">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase block">Telur Eceran (Kg)</span>
+                        <span class="text-base sm:text-lg font-black text-amber-600">{{ number_format($summary['total_kg_telur'], 2, ',', '.') }} Kg</span>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-xs">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase block">Pakan Terjual</span>
+                        <span class="text-base sm:text-lg font-black text-emerald-700">{{ number_format($summary['total_karung_pakan'], 0, ',', '.') }} Karung</span>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-xs">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase block">Total Omzet Penjualan</span>
+                        <span class="text-base sm:text-lg font-black text-slate-900">Rp {{ number_format($summary['total_omzet'], 0, ',', '.') }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                    <thead>
+                        <tr class="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-extrabold">
+                            <th class="py-3.5 px-4">Tanggal</th>
+                            <th class="py-3.5 px-4">No Invoice</th>
+                            <th class="py-3.5 px-4">Kategori & Barang</th>
+                            <th class="py-3.5 px-4 text-right">Jumlah Keluar</th>
+                            <th class="py-3.5 px-4 text-right">Harga Satuan</th>
+                            <th class="py-3.5 px-4 text-right">Total Nilai</th>
+                            <th class="py-3.5 px-4">Pembeli</th>
+                            <th class="py-3.5 px-4">Metode & Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
+                        @forelse($data as $r)
+                            @php
+                                $isTelur = strtolower($r->category) === 'telur';
+                            @endphp
+                            <tr class="hover:bg-slate-50/70 transition-colors">
+                                <td class="py-3 px-4 font-bold text-slate-800">
+                                    {{ \Carbon\Carbon::parse($r->date)->translatedFormat('d M Y') }}
+                                </td>
+                                <td class="py-3 px-4 font-mono font-bold text-[11px] text-slate-500">
+                                    #{{ $r->invoice_no }}
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase {{ $isTelur ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800' }}">
+                                        {{ $r->category }}
+                                    </span>
+                                    <span class="font-bold text-slate-900 ml-1">{{ $r->item_name }}</span>
+                                </td>
+                                <td class="py-3 px-4 text-right font-black text-maroon-800">
+                                    -{{ number_format($r->quantity, 0, ',', '.') }} {{ $r->unit }}
+                                </td>
+                                <td class="py-3 px-4 text-right text-slate-500">
+                                    Rp {{ number_format($r->unit_price, 0, ',', '.') }}
+                                </td>
+                                <td class="py-3 px-4 text-right font-extrabold text-slate-900">
+                                    Rp {{ number_format($r->total_price, 0, ',', '.') }}
+                                </td>
+                                <td class="py-3 px-4 text-slate-700 font-semibold">
+                                    {{ $r->customer_name }}
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                        {{ $r->payment_status }} ({{ $r->payment_method }})
+                                    </span>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="8" class="py-10 text-center text-slate-400">Tidak ada transaksi penjualan pada periode ini.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                    @if(count($data) > 0)
+                        <tfoot>
+                            <tr class="bg-slate-100/80 font-black text-slate-900 border-t-2 border-slate-300">
+                                <td colspan="3" class="py-3 px-4 text-right uppercase tracking-wider text-[11px]">Total Omzet Penjualan (Barang Keluar):</td>
+                                <td colspan="3" class="py-3 px-4 text-right text-sm text-maroon-800">
+                                    Rp {{ number_format($summary['total_omzet'], 0, ',', '.') }}
+                                </td>
+                                <td colspan="2" class="py-3 px-4 text-[11px] text-slate-500 font-normal">
+                                    {{ $summary['total_transaksi'] }} Transaksi Terdaftar
+                                </td>
+                            </tr>
+                        </tfoot>
+                    @endif
                 </table>
             </div>
         @endif

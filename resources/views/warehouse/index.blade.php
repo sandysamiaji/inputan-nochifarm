@@ -265,5 +265,66 @@
         </div>
     </div>
 
+    <!-- TRANSAKSI PENJUALAN BARANG KELUAR (TERHUBUNG 1 DB NOCHIFRAM) -->
+    <div class="farm-card p-5 sm:p-6 border-t-4 border-t-maroon-800">
+        <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-rose-100 text-maroon-800 flex items-center justify-center">
+                    <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h3 class="font-bold text-slate-800 text-sm sm:text-base">Barang Keluar: Penjualan Real-Time</h3>
+                        <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">1 DB nochifram</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Data otomatis ditarik langsung dari sistem kasir & penjualan peternakan</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <a href="{{ route('warehouse.telur', ['tab' => 'penjualan']) }}" class="text-xs font-bold text-maroon-700 hover:text-maroon-900 transition-colors">
+                    Semua Penjualan →
+                </a>
+            </div>
+        </div>
+
+        <div class="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            @forelse($recentSales as $sale)
+                @php
+                    $isTelur = strtolower($sale->category) === 'telur';
+                @endphp
+                <div class="p-3.5 rounded-2xl bg-slate-50/70 border border-slate-200/70 hover:border-maroon-300 transition-all flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between gap-1 mb-1.5">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase {{ $isTelur ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800' }}">
+                                {{ $sale->category }} • {{ $sale->unit }}
+                            </span>
+                            <span class="text-[10px] font-bold text-slate-400 font-mono">#{{ $sale->invoice_no }}</span>
+                        </div>
+                        <h4 class="text-xs font-bold text-slate-900 truncate">{{ $sale->item_name }}</h4>
+                        <p class="text-[11px] text-slate-500 mt-0.5">
+                            Pembeli: <b class="text-slate-700">{{ $sale->customer_name }}</b>
+                        </p>
+                    </div>
+
+                    <div class="mt-3 pt-2 border-t border-slate-200/60 flex items-center justify-between text-xs">
+                        <div>
+                            <span class="font-extrabold text-maroon-800 block">-{{ number_format($sale->quantity, 0, ',', '.') }} {{ $sale->unit }}</span>
+                            <span class="text-[10px] text-slate-400">{{ \Carbon\Carbon::parse($sale->date)->translatedFormat('d M Y') }}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="font-bold text-slate-800 block">Rp {{ number_format($sale->total_price, 0, ',', '.') }}</span>
+                            <span class="text-[9px] font-bold text-emerald-600 uppercase">{{ $sale->payment_status }}</span>
+                        </div>
+                    </div>
+                </div>
+            @empty
+                <div class="col-span-3 py-6 text-center text-slate-400 text-xs">
+                    Belum ada riwayat penjualan tercatat di aplikasi nochifram.
+                </div>
+            @endforelse
+        </div>
+    </div>
+
 </div>
 @endsection

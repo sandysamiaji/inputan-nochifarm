@@ -345,9 +345,9 @@
                             </span>
                             <span class="text-maroon-800 font-black text-sm">{{ number_format($currentEggStockCrates, 0, ',', '.') }} Peti</span>
                         </div>
-                        <div class="flex justify-between text-[11px] text-slate-500 pt-1 border-t border-amber-100/60">
-                            <span>Masuk (Kandang): <b>{{ number_format($totalEggProducedAllTime, 0, ',', '.') }} Peti</b></span>
-                            <span>Keluar (Penjualan): <b>{{ number_format($totalEggSoldAllTime, 0, ',', '.') }} Peti</b></span>
+                        <div class="flex flex-col sm:flex-row sm:justify-between text-[11px] text-slate-500 pt-1.5 border-t border-amber-100/60 gap-1">
+                            <span>Masuk: <b class="text-slate-700">{{ number_format($totalEggProducedAllTime, 0, ',', '.') }} Peti</b></span>
+                            <span>Keluar: <b class="text-maroon-800 font-bold">{{ number_format($totalEggSoldAllTime, 0, ',', '.') }} Peti & {{ number_format($eggKgSold, 0, ',', '.') }} Kg Terjual</b></span>
                         </div>
                     </div>
 
@@ -359,9 +359,9 @@
                             </span>
                             <span class="text-emerald-700 font-black text-sm">{{ number_format($currentFeedStockKg, 0, ',', '.') }} Kg</span>
                         </div>
-                        <div class="flex justify-between text-[11px] text-slate-500 pt-1 border-t border-emerald-100/60">
-                            <span>Stok Gudang: <b>18.250 Kg</b></span>
-                            <span>Terpakai: <b>{{ number_format($totalFeedUsedAllTime, 0, ',', '.') }} Kg</b></span>
+                        <div class="flex flex-col sm:flex-row sm:justify-between text-[11px] text-slate-500 pt-1.5 border-t border-emerald-100/60 gap-1">
+                            <span>Kandang: <b class="text-slate-700">{{ number_format($totalFeedUsedAllTime, 0, ',', '.') }} Kg</b></span>
+                            <span>Terjual: <b class="text-emerald-800 font-bold">{{ number_format($feedKarungSold, 0, ',', '.') }} Karung ({{ number_format($feedKgSoldTotal, 0, ',', '.') }} Kg)</b></span>
                         </div>
                     </div>
                 </div>

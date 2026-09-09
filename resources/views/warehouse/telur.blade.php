@@ -16,20 +16,52 @@
         </div>
 
         <!-- Stok Quick Stat Banner -->
-        <div class="hidden sm:flex items-center gap-4 bg-white px-4 py-2 rounded-2xl border border-slate-100 shadow-sm">
-            <div class="text-right">
-                <span class="text-[10px] uppercase font-bold text-slate-400 block">Stok Saat Ini</span>
-                <span class="text-base font-extrabold text-emerald-600">{{ number_format($stokSaatIni, 0, ',', '.') }} Peti</span>
+        <div class="flex flex-wrap items-center gap-2 sm:gap-4 bg-white px-4 py-2.5 rounded-2xl border border-slate-100 shadow-sm">
+            <div class="text-left sm:text-right">
+                <span class="text-[10px] uppercase font-bold text-slate-400 block">Sisa Stok</span>
+                <span class="text-sm sm:text-base font-extrabold text-emerald-600">{{ number_format($stokSaatIni, 0, ',', '.') }} Peti</span>
             </div>
-            <div class="h-7 w-px bg-slate-200"></div>
-            <div class="text-right">
+            <div class="hidden sm:block h-7 w-px bg-slate-200"></div>
+            <div class="text-left sm:text-right">
                 <span class="text-[10px] uppercase font-bold text-slate-400 block">Total Masuk</span>
-                <span class="text-xs font-bold text-slate-700">{{ number_format($totalMasuk, 0, ',', '.') }} Peti</span>
+                <span class="text-xs sm:text-sm font-bold text-slate-700">{{ number_format($totalMasuk, 0, ',', '.') }} Peti</span>
             </div>
-            <div class="text-right">
-                <span class="text-[10px] uppercase font-bold text-slate-400 block">Total Keluar</span>
-                <span class="text-xs font-bold text-slate-700">{{ number_format($totalKeluar, 0, ',', '.') }} Peti</span>
+            <div class="hidden sm:block h-7 w-px bg-slate-200"></div>
+            <div class="text-left sm:text-right">
+                <span class="text-[10px] uppercase font-bold text-maroon-800 block flex items-center gap-1">
+                    <i data-lucide="shopping-cart" class="w-3 h-3"></i> Terjual (nochifram)
+                </span>
+                <span class="text-xs sm:text-sm font-extrabold text-maroon-800">{{ number_format($petiSold, 0, ',', '.') }} Peti & {{ number_format($kgSold, 0, ',', '.') }} Kg</span>
             </div>
+            <div class="hidden md:block h-7 w-px bg-slate-200"></div>
+            <div class="hidden md:block text-right">
+                <span class="text-[10px] uppercase font-bold text-slate-400 block">Omzet Penjualan</span>
+                <span class="text-xs font-black text-slate-800">Rp {{ number_format($totalRevenue, 0, ',', '.') }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Banner Ringkasan Integrasi Penjualan (1 DB nochifram) -->
+    <div class="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-rose-50 via-white to-amber-50 border border-rose-200/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-maroon-800 text-white flex items-center justify-center shrink-0 shadow-sm">
+                <i data-lucide="database" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <h3 class="text-xs sm:text-sm font-bold text-slate-800">Sinkronisasi Barang Keluar Terhubung</h3>
+                    <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">1 DB nochifram</span>
+                </div>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Data barang keluar otomatis memotong stok telur berdasarkan penjualan <b>{{ number_format($petiSold, 0, ',', '.') }} Peti</b> dan <b>{{ number_format($kgSold, 1, ',', '.') }} Kg</b> di kasir/toko.
+                </p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2 self-end sm:self-center">
+            <a href="{{ route('warehouse.telur', ['tab' => 'penjualan']) }}" class="px-3 py-1.5 rounded-xl bg-white border border-rose-200 text-maroon-800 hover:bg-rose-50 text-xs font-bold transition-all shadow-xs flex items-center gap-1.5">
+                <i data-lucide="receipt" class="w-3.5 h-3.5"></i>
+                <span>Lihat {{ $transactionCount }} Penjualan</span>
+            </a>
         </div>
     </div>
 
@@ -42,7 +74,7 @@
                 type="text" 
                 name="q" 
                 value="{{ $search }}" 
-                placeholder="Cari data telur..." 
+                placeholder="Cari data telur atau penjualan..." 
                 class="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-white border border-slate-200 text-xs sm:text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-maroon-800/20 focus:border-maroon-800 shadow-sm transition-all"
             >
             @if($search)
@@ -58,27 +90,81 @@
         </button>
     </div>
 
-    <!-- Filter Tabs: Semua | Masuk | Keluar (Sesuai Mockup) -->
-    <div class="flex items-center border-b border-slate-200 gap-6 sm:gap-8 px-1">
-        <a href="{{ route('warehouse.telur', ['tab' => 'semua', 'q' => $search]) }}" class="pb-3 text-xs sm:text-sm font-bold transition-all relative {{ $tab === 'semua' ? 'text-maroon-800' : 'text-slate-400 hover:text-slate-600' }}">
-            Semua
+    <!-- Filter Tabs: Semua | Masuk | Keluar | Penjualan nochifram -->
+    <div class="flex items-center border-b border-slate-200 gap-4 sm:gap-8 px-1 overflow-x-auto">
+        <a href="{{ route('warehouse.telur', ['tab' => 'semua', 'q' => $search]) }}" class="pb-3 text-xs sm:text-sm font-bold transition-all relative shrink-0 {{ $tab === 'semua' ? 'text-maroon-800' : 'text-slate-400 hover:text-slate-600' }}">
+            Semua Data
             @if($tab === 'semua')
                 <span class="absolute bottom-0 left-0 right-0 h-0.5 bg-maroon-800 rounded-full"></span>
             @endif
         </a>
-        <a href="{{ route('warehouse.telur', ['tab' => 'masuk', 'q' => $search]) }}" class="pb-3 text-xs sm:text-sm font-bold transition-all relative {{ $tab === 'masuk' ? 'text-maroon-800' : 'text-slate-400 hover:text-slate-600' }}">
-            Masuk
+        <a href="{{ route('warehouse.telur', ['tab' => 'masuk', 'q' => $search]) }}" class="pb-3 text-xs sm:text-sm font-bold transition-all relative shrink-0 {{ $tab === 'masuk' ? 'text-maroon-800' : 'text-slate-400 hover:text-slate-600' }}">
+            Masuk (Produksi)
             @if($tab === 'masuk')
                 <span class="absolute bottom-0 left-0 right-0 h-0.5 bg-maroon-800 rounded-full"></span>
             @endif
         </a>
-        <a href="{{ route('warehouse.telur', ['tab' => 'keluar', 'q' => $search]) }}" class="pb-3 text-xs sm:text-sm font-bold transition-all relative {{ $tab === 'keluar' ? 'text-maroon-800' : 'text-slate-400 hover:text-slate-600' }}">
-            Keluar
+        <a href="{{ route('warehouse.telur', ['tab' => 'keluar', 'q' => $search]) }}" class="pb-3 text-xs sm:text-sm font-bold transition-all relative shrink-0 {{ $tab === 'keluar' ? 'text-maroon-800' : 'text-slate-400 hover:text-slate-600' }}">
+            Keluar (Gudang)
             @if($tab === 'keluar')
                 <span class="absolute bottom-0 left-0 right-0 h-0.5 bg-maroon-800 rounded-full"></span>
             @endif
         </a>
+        <a href="{{ route('warehouse.telur', ['tab' => 'penjualan', 'q' => $search]) }}" class="pb-3 text-xs sm:text-sm font-bold transition-all relative shrink-0 flex items-center gap-1.5 {{ $tab === 'penjualan' ? 'text-maroon-800' : 'text-slate-400 hover:text-slate-600' }}">
+            <span>Penjualan (nochifram)</span>
+            <span class="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold {{ $tab === 'penjualan' ? 'bg-maroon-800 text-white' : 'bg-slate-200 text-slate-600' }}">{{ $transactionCount }}</span>
+            @if($tab === 'penjualan')
+                <span class="absolute bottom-0 left-0 right-0 h-0.5 bg-maroon-800 rounded-full"></span>
+            @endif
+        </a>
     </div>
+
+    <!-- Jika Tab Penjualan dipilih, tampilkan daftar transaksi penjualan nochifram -->
+    @if($tab === 'penjualan')
+        <div class="space-y-2.5">
+            <div class="flex items-center justify-between px-1">
+                <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Daftar Transaksi Keluar / Terjual di Aplikasi Penjualan nochifram</span>
+                <span class="text-xs font-bold text-maroon-800">Total: {{ $transactionCount }} Transaksi</span>
+            </div>
+            @forelse($salesList as $sale)
+                <div class="farm-card p-3.5 sm:p-4 hover:border-maroon-200 transition-all flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3.5 min-w-0 flex-1">
+                        <div class="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200/80 text-maroon-800 flex items-center justify-center shrink-0 shadow-inner">
+                            <i data-lucide="shopping-bag" class="w-6 h-6 text-maroon-800"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2 mb-0.5">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-maroon-100 text-maroon-800 border border-maroon-200">
+                                    TERJUAL • {{ $sale->unit }}
+                                </span>
+                                <span class="text-[11px] font-bold text-slate-400 font-mono">#{{ $sale->invoice_no }}</span>
+                            </div>
+                            <h2 class="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                                {{ $sale->item_name }} — <span class="text-maroon-800 font-black">{{ number_format($sale->quantity, 0, ',', '.') }} {{ $sale->unit }}</span>
+                            </h2>
+                            <div class="text-[11px] text-slate-500 flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
+                                <span>Pembeli: <b>{{ $sale->customer_name }}</b></span>
+                                <span>•</span>
+                                <span>Total: <b class="text-slate-800">Rp {{ number_format($sale->total_price, 0, ',', '.') }}</b></span>
+                                <span>•</span>
+                                <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">{{ $sale->payment_status }} ({{ $sale->payment_method }})</span>
+                                <span>•</span>
+                                <span class="text-slate-400">{{ \Carbon\Carbon::parse($sale->date)->translatedFormat('d M Y') }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <span class="text-xs sm:text-sm font-black text-maroon-800 block">-{{ number_format($sale->quantity, 0, ',', '.') }} {{ $sale->unit }}</span>
+                        <span class="text-[10px] text-slate-400">Barang Keluar</span>
+                    </div>
+                </div>
+            @empty
+                <div class="text-center py-10 bg-white rounded-2xl border border-slate-100">
+                    <p class="text-xs text-slate-400">Belum ada transaksi penjualan telur tercatat.</p>
+                </div>
+            @endforelse
+        </div>
+    @else
 
     <!-- List Data Telur (Sesuai Gambar Mockup 2 Layar 1) -->
     <div class="space-y-2.5">
@@ -221,6 +307,7 @@
     <div class="mt-4">
         {{ $items->links() }}
     </div>
+    @endif
 
 </div>
 

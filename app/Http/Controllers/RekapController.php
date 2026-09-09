@@ -279,6 +279,35 @@ class RekapController extends Controller
             $summary = [
                 'total_kegiatan' => $data->count(),
             ];
+
+        } elseif ($tab === 'penjualan') {
+            $data = \App\Services\OutboundIntegrationService::getSalesTransactions(null, $startDate, $endDate, 200);
+
+            $eggPeti = 0;
+            $eggKg = 0;
+            $feedKarung = 0;
+            $feedKg = 0;
+            $totalRev = 0;
+
+            foreach ($data as $row) {
+                $totalRev += (float) $row->total_price;
+                if ($row->category === 'telur') {
+                    if ($row->unit === 'Peti') $eggPeti += (float) $row->quantity;
+                    if ($row->unit === 'Kg') $eggKg += (float) $row->quantity;
+                } elseif ($row->category === 'pakan') {
+                    if ($row->unit === 'Karung') $feedKarung += (float) $row->quantity;
+                    if ($row->unit === 'Kg') $feedKg += (float) $row->quantity;
+                }
+            }
+
+            $summary = [
+                'total_peti_telur' => $eggPeti,
+                'total_kg_telur' => $eggKg,
+                'total_karung_pakan' => $feedKarung,
+                'total_kg_pakan' => $feedKg,
+                'total_omzet' => $totalRev,
+                'total_transaksi' => $data->count(),
+            ];
         }
 
         return view('rekap.detail', compact(
@@ -402,6 +431,28 @@ class RekapController extends Controller
                         $r->notes ?? '-'
                     ]);
                 }
+
+            } elseif ($tab === 'penjualan') {
+                fputcsv($file, ['Tanggal', 'No Invoice', 'Kategori', 'Nama Item', 'Kuantitas', 'Satuan', 'Harga Satuan (Rp)', 'Total (Rp)', 'Nama Pelanggan', 'Metode Bayar', 'Status']);
+                $records = \App\Services\OutboundIntegrationService::getSalesTransactions(null, $startDate, $endDate, 500);
+                $totalRev = 0;
+                foreach ($records as $r) {
+                    fputcsv($file, [
+                        $this->formatIndoDate($r->date),
+                        $r->invoice_no,
+                        ucfirst($r->category),
+                        $r->item_name,
+                        number_format($r->quantity, 0, ',', '.'),
+                        $r->unit,
+                        number_format($r->unit_price, 0, ',', '.'),
+                        number_format($r->total_price, 0, ',', '.'),
+                        $r->customer_name,
+                        $r->payment_method,
+                        $r->payment_status
+                    ]);
+                    $totalRev += (float) $r->total_price;
+                }
+                fputcsv($file, ['Total', '', '', '', '', '', '', number_format($totalRev, 0, ',', '.'), '', '', '']);
             }
 
             fclose($file);

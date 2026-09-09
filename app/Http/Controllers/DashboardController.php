@@ -163,16 +163,19 @@ class DashboardController extends Controller
         $coops = Coop::with('flock')->where('is_active', true)->get();
 
         // 8. Integrasi Data Gudang & Penjualan dari nochifram
-        $totalEggProducedAllTime = (float) EggProduction::sum('crates_count');
-        $totalEggSoldAllTime = (float) \App\Models\SaleItem::where('item_name', 'like', '%Telur%')
-            ->where('unit', 'Peti')
-            ->sum('quantity');
-        $currentEggStockCrates = max(0, $totalEggProducedAllTime - $totalEggSoldAllTime);
+        $eggSummary = \App\Services\OutboundIntegrationService::getEggOutboundSummary();
+        $feedSummary = \App\Services\OutboundIntegrationService::getFeedOutboundSummary();
 
-        $totalFeedUsedAllTime = (float) FeedConsumption::sum('quantity_kg');
-        // Anggap stok pakan awal / pembelian dari gudang
-        $totalFeedPurchased = 18250.0;
-        $currentFeedStockKg = max(0, $totalFeedPurchased - $totalFeedUsedAllTime);
+        $totalEggProducedAllTime = $eggSummary['total_produced_crates'];
+        $totalEggSoldAllTime = $eggSummary['peti_sold'];
+        $eggKgSold = $eggSummary['kg_sold'];
+        $currentEggStockCrates = $eggSummary['current_stock_peti'];
+
+        $totalFeedPurchased = $feedSummary['purchased_kg'];
+        $totalFeedUsedAllTime = $feedSummary['consumption_kg'];
+        $feedKarungSold = $feedSummary['karung_sold'];
+        $feedKgSoldTotal = $feedSummary['sold_in_kg'];
+        $currentFeedStockKg = $feedSummary['current_stock_kg'];
 
         $totalActiveChickens = (int) $coops->sum('active_chickens');
         $totalCoopsCount = $coops->count();
@@ -209,9 +212,13 @@ class DashboardController extends Controller
             'coops',
             'totalEggProducedAllTime',
             'totalEggSoldAllTime',
+            'eggKgSold',
             'currentEggStockCrates',
             'currentFeedStockKg',
+            'totalFeedPurchased',
             'totalFeedUsedAllTime',
+            'feedKarungSold',
+            'feedKgSoldTotal',
             'totalActiveChickens',
             'totalCoopsCount',
             'motivationMsg',
