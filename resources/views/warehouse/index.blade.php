@@ -38,15 +38,15 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
 
         <!-- 1. GUDANG TELUR -->
-        <a href="{{ route('warehouse.telur') }}" class="farm-card farm-card-interactive p-5 sm:p-6 block group relative overflow-hidden">
+        <a href="{{ route('warehouse.telur') }}" class="farm-card farm-card-interactive p-3.5 sm:p-5 block group relative overflow-hidden">
             <!-- Accent stripe on top -->
             <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-400 via-rose-400 to-maroon-700"></div>
 
             <div class="flex items-start justify-between">
-                <div class="flex items-center gap-3.5">
+                <div class="flex items-center gap-3">
                     <!-- Icon Telur -->
-                    <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-100 to-orange-50 border border-amber-200/80 flex items-center justify-center text-amber-600 shadow-inner group-hover:scale-110 transition-transform">
-                        <svg class="w-8 h-8 fill-amber-500 drop-shadow-sm" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <div class="w-11 h-11 sm:w-13 sm:h-13 rounded-2xl bg-gradient-to-br from-amber-100 to-orange-50 border border-amber-200/80 flex items-center justify-center text-amber-600 shadow-inner group-hover:scale-110 transition-transform">
+                        <svg class="w-6 h-6 sm:w-7 sm:h-7 fill-amber-500 drop-shadow-sm" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path d="M12 2C8.13 2 5 6.48 5 12c0 4.42 3.13 8 7 8s7-3.58 7-8c0-5.52-3.13-10-7-10z"/>
                         </svg>
                     </div>
@@ -61,41 +61,54 @@
                 </div>
             </div>
 
-            <!-- Angka Masuk, Keluar, dan Stok Saat Ini -->
-            <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
-                <div class="space-y-1">
-                    <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Masuk</div>
-                    <div class="text-sm sm:text-base font-bold text-slate-700">{{ number_format($telurMasuk, 0, ',', '.') }} <span class="text-xs font-normal text-slate-500">Peti</span></div>
+            <!-- Angka Masuk, Keluar, dan Stok Saat Ini (Grid 3 Kolom Responsif Sempurna) -->
+            <div class="mt-4 pt-3 border-t border-slate-100 grid grid-cols-3 gap-1 sm:gap-2 items-start">
+                <!-- 1. Masuk -->
+                <div class="space-y-0.5 min-w-0">
+                    <div class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Masuk</div>
+                    <div class="text-xs sm:text-base font-bold text-slate-800 leading-tight">
+                        {{ number_format($telurMasuk, 0, ',', '.') }} <span class="text-[10px] sm:text-xs font-normal text-slate-500">Peti</span>
+                    </div>
+                    <div class="text-[9px] sm:text-[10px] font-medium text-slate-400 truncate">
+                        ({{ number_format($telurMasukButir, 0, ',', '.') }} Butir)
+                    </div>
                 </div>
 
-                <div class="h-8 w-px bg-slate-200"></div>
-
-                <div class="space-y-1">
-                    <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Keluar</div>
-                    <div class="text-sm sm:text-base font-bold text-slate-700">{{ number_format($telurKeluar, 0, ',', '.') }} <span class="text-xs font-normal text-slate-500">Peti</span></div>
+                <!-- 2. Keluar (Border Kiri & Kanan Pemisah) -->
+                <div class="space-y-0.5 min-w-0 border-x border-slate-200 px-1.5 sm:px-2">
+                    <div class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Keluar</div>
+                    <div class="text-xs sm:text-sm font-bold text-slate-800 leading-tight">
+                        <div>{{ number_format($telurKeluar, 0, ',', '.') }} <span class="text-[10px] font-normal text-slate-500">Peti</span></div>
+                        <div class="text-[11px] sm:text-xs text-slate-600 font-semibold">& {{ number_format($telurKgSold, 0, ',', '.') }} <span class="text-[9px] font-normal text-slate-500">Kg</span></div>
+                    </div>
+                    <div class="text-[9px] sm:text-[10px] font-medium text-slate-400 truncate" title="{{ number_format($telurPetiSold, 0, ',', '.') }} Peti • {{ number_format($telurKgSold, 0, ',', '.') }} Kg Terjual">
+                        {{ number_format($telurPetiSold, 0, ',', '.') }} Peti Terjual
+                    </div>
                 </div>
 
-                <div class="h-8 w-px bg-slate-200"></div>
-
-                <div class="text-right space-y-1">
-                    <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Stok Saat Ini</div>
-                    <div class="text-lg sm:text-xl font-extrabold text-emerald-600">
-                        {{ number_format($telurStok, 0, ',', '.') }} <span class="text-xs font-bold text-emerald-700">Peti</span>
+                <!-- 3. Stok Saat Ini -->
+                <div class="text-right space-y-0.5 min-w-0">
+                    <div class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Stok Saat Ini</div>
+                    <div class="text-xs sm:text-lg font-black text-emerald-600 leading-tight">
+                        {{ number_format($telurStok, 0, ',', '.') }} <span class="text-[10px] sm:text-xs font-bold text-emerald-700">Peti</span>
+                    </div>
+                    <div class="text-[9px] sm:text-[10px] font-semibold text-emerald-600 truncate">
+                        ({{ number_format($telurStokButir, 0, ',', '.') }} Butir)
                     </div>
                 </div>
             </div>
         </a>
 
         <!-- 2. GUDANG PAKAN -->
-        <a href="{{ route('warehouse.pakan') }}" class="farm-card farm-card-interactive p-5 sm:p-6 block group relative overflow-hidden">
+        <a href="{{ route('warehouse.pakan') }}" class="farm-card farm-card-interactive p-3.5 sm:p-5 block group relative overflow-hidden">
             <!-- Accent stripe on top -->
             <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-400 via-teal-400 to-maroon-700"></div>
 
             <div class="flex items-start justify-between">
-                <div class="flex items-center gap-3.5">
+                <div class="flex items-center gap-3">
                     <!-- Icon Karung Pakan -->
-                    <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-100 to-green-50 border border-emerald-200/80 flex items-center justify-center text-emerald-600 shadow-inner group-hover:scale-110 transition-transform">
-                        <svg class="w-8 h-8 fill-emerald-600 drop-shadow-sm" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <div class="w-11 h-11 sm:w-13 sm:h-13 rounded-2xl bg-gradient-to-br from-emerald-100 to-green-50 border border-emerald-200/80 flex items-center justify-center text-emerald-600 shadow-inner group-hover:scale-110 transition-transform">
+                        <svg class="w-6 h-6 sm:w-7 sm:h-7 fill-emerald-600 drop-shadow-sm" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path d="M19 6h-2.28a4.99 4.99 0 0 0-9.44 0H5a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V9a3 3 0 0 0-3-3zm-7-2c1.3 0 2.4.84 2.82 2h-5.64A3.003 3.003 0 0 1 12 4zm0 13a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/>
                         </svg>
                     </div>
@@ -110,41 +123,58 @@
                 </div>
             </div>
 
-            <!-- Angka Masuk, Keluar, dan Stok Saat Ini -->
-            <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
-                <div class="space-y-1">
-                    <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Masuk</div>
-                    <div class="text-sm sm:text-base font-bold text-slate-700">{{ number_format($pakanMasuk, 0, ',', '.') }} <span class="text-xs font-normal text-slate-500">Kg</span></div>
+            <!-- Angka Masuk, Keluar, dan Stok Saat Ini (Grid 3 Kolom Responsif Sempurna) -->
+            <div class="mt-4 pt-3 border-t border-slate-100 grid grid-cols-3 gap-1 sm:gap-2 items-start">
+                <!-- 1. Masuk -->
+                <div class="space-y-0.5 min-w-0">
+                    <div class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Masuk</div>
+                    <div class="text-xs sm:text-base font-bold text-slate-800 leading-tight">
+                        {{ number_format($pakanMasuk, 0, ',', '.') }} <span class="text-[10px] sm:text-xs font-normal text-slate-500">Kg</span>
+                    </div>
+                    <div class="text-[9px] sm:text-[10px] font-medium text-slate-400 truncate">
+                        ({{ number_format($pakanMasukKarung, 0, ',', '.') }} Krg)
+                    </div>
                 </div>
 
-                <div class="h-8 w-px bg-slate-200"></div>
-
-                <div class="space-y-1">
-                    <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Keluar</div>
-                    <div class="text-sm sm:text-base font-bold text-slate-700">{{ number_format($pakanKeluar, 0, ',', '.') }} <span class="text-xs font-normal text-slate-500">Kg</span></div>
+                <!-- 2. Keluar (Border Kiri & Kanan Pemisah) -->
+                <div class="space-y-0.5 min-w-0 border-x border-slate-200 px-1.5 sm:px-2">
+                    <div class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Keluar</div>
+                    <div class="text-xs sm:text-sm font-bold text-slate-800 leading-tight">
+                        <div>{{ number_format($pakanKarungSold > 0 ? $pakanKarungSold : $pakanTotalKarungKeluar, 0, ',', '.') }} <span class="text-[10px] font-normal text-slate-500">Krg</span></div>
+                        <div class="text-[11px] sm:text-xs text-slate-600 font-semibold">& {{ number_format($pakanKeluar, 0, ',', '.') }} <span class="text-[9px] font-normal text-slate-500">Kg</span></div>
+                    </div>
+                    <div class="text-[9px] sm:text-[10px] font-medium text-slate-400 truncate" title="@if($pakanKarungSold > 0){{ number_format($pakanKarungSold, 0, ',', '.') }} Krg Terjual • {{ number_format($pakanConsumptionKg, 0, ',', '.') }} Kg Kandang @else {{ number_format($pakanTotalKarungKeluar, 0, ',', '.') }} Karung Keluar @endif">
+                        @if($pakanKarungSold > 0)
+                            {{ number_format($pakanKarungSold, 0, ',', '.') }} Krg Terjual
+                        @else
+                            {{ number_format($pakanTotalKarungKeluar, 0, ',', '.') }} Karung Keluar
+                        @endif
+                    </div>
                 </div>
 
-                <div class="h-8 w-px bg-slate-200"></div>
-
-                <div class="text-right space-y-1">
-                    <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Stok Saat Ini</div>
-                    <div class="text-lg sm:text-xl font-extrabold text-emerald-600">
-                        {{ number_format($pakanStok, 0, ',', '.') }} <span class="text-xs font-bold text-emerald-700">Kg</span>
+                <!-- 3. Stok Saat Ini -->
+                <div class="text-right space-y-0.5 min-w-0">
+                    <div class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Stok Saat Ini</div>
+                    <div class="text-xs sm:text-lg font-black text-emerald-600 leading-tight">
+                        {{ number_format($pakanStok, 0, ',', '.') }} <span class="text-[10px] sm:text-xs font-bold text-emerald-700">Kg</span>
+                    </div>
+                    <div class="text-[9px] sm:text-[10px] font-semibold text-emerald-600 truncate">
+                        ({{ number_format($pakanStokKarung, 0, ',', '.') }} Krg)
                     </div>
                 </div>
             </div>
         </a>
 
         <!-- 3. GUDANG OBAT, VAKSIN & VITAMIN -->
-        <a href="{{ route('warehouse.obat') }}" class="farm-card farm-card-interactive p-5 sm:p-6 block group relative overflow-hidden">
+        <a href="{{ route('warehouse.obat') }}" class="farm-card farm-card-interactive p-4 sm:p-6 block group relative overflow-hidden">
             <!-- Accent stripe on top -->
             <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-purple-400 via-rose-400 to-maroon-700"></div>
 
             <div class="flex items-start justify-between">
                 <div class="flex items-center gap-3.5">
                     <!-- Icon Botol Obat/Vaksin -->
-                    <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-100 to-rose-50 border border-purple-200/80 flex items-center justify-center text-purple-600 shadow-inner group-hover:scale-110 transition-transform">
-                        <svg class="w-8 h-8 fill-purple-600 drop-shadow-sm" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-purple-100 to-rose-50 border border-purple-200/80 flex items-center justify-center text-purple-600 shadow-inner group-hover:scale-110 transition-transform">
+                        <svg class="w-7 h-7 sm:w-8 sm:h-8 fill-purple-600 drop-shadow-sm" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path d="M6 3h12v2H6V3zm2 4h8v3h-8V7zm0 5h8v8a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-8zm4 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"/>
                         </svg>
                     </div>
@@ -159,26 +189,38 @@
                 </div>
             </div>
 
-            <!-- Angka Masuk, Keluar, dan Stok Saat Ini -->
-            <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
-                <div class="space-y-1">
-                    <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Masuk</div>
-                    <div class="text-sm sm:text-base font-bold text-slate-700">{{ number_format($obatMasuk, 0, ',', '.') }} <span class="text-xs font-normal text-slate-500">Item</span></div>
+            <!-- Angka Masuk, Keluar, dan Stok Saat Ini (Grid 3 Kolom Responsif Sempurna) -->
+            <div class="mt-5 pt-3.5 border-t border-slate-100 grid grid-cols-3 gap-1 sm:gap-2 items-center">
+                <!-- 1. Masuk -->
+                <div class="space-y-0.5 min-w-0 pr-1">
+                    <div class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Masuk</div>
+                    <div class="text-xs sm:text-base font-bold text-slate-800 leading-tight truncate">
+                        {{ number_format($obatMasuk, 0, ',', '.') }} <span class="text-[10px] sm:text-xs font-normal text-slate-500">Item</span>
+                    </div>
+                    <div class="text-[9px] sm:text-[10px] font-medium text-slate-400 truncate">
+                        Vaksin & Obat
+                    </div>
                 </div>
 
-                <div class="h-8 w-px bg-slate-200"></div>
-
-                <div class="space-y-1">
-                    <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Keluar</div>
-                    <div class="text-sm sm:text-base font-bold text-slate-700">{{ number_format($obatKeluar, 0, ',', '.') }} <span class="text-xs font-normal text-slate-500">Item</span></div>
+                <!-- 2. Keluar (Border Kiri & Kanan Pemisah) -->
+                <div class="space-y-0.5 min-w-0 border-x border-slate-200/80 px-1.5 sm:px-2">
+                    <div class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Keluar</div>
+                    <div class="text-xs sm:text-base font-bold text-slate-800 leading-tight truncate">
+                        {{ number_format($obatKeluar, 0, ',', '.') }} <span class="text-[10px] sm:text-xs font-normal text-slate-500">Item</span>
+                    </div>
+                    <div class="text-[9px] sm:text-[10px] font-medium text-slate-400 truncate">
+                        Kandang
+                    </div>
                 </div>
 
-                <div class="h-8 w-px bg-slate-200"></div>
-
-                <div class="text-right space-y-1">
-                    <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Stok Saat Ini</div>
-                    <div class="text-lg sm:text-xl font-extrabold text-emerald-600">
-                        {{ number_format($obatStok, 0, ',', '.') }} <span class="text-xs font-bold text-emerald-700">Item</span>
+                <!-- 3. Stok Saat Ini -->
+                <div class="text-right space-y-0.5 min-w-0 pl-1">
+                    <div class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Stok Saat Ini</div>
+                    <div class="text-xs sm:text-xl font-extrabold text-emerald-600 leading-tight truncate">
+                        {{ number_format($obatStok, 0, ',', '.') }} <span class="text-[10px] sm:text-xs font-bold text-emerald-700">Item</span>
+                    </div>
+                    <div class="text-[9px] sm:text-[10px] font-semibold text-emerald-600 truncate">
+                        Tersedia
                     </div>
                 </div>
             </div>

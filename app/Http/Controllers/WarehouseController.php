@@ -38,8 +38,11 @@ class WarehouseController extends Controller
         // 1. Gudang Telur (Terintegrasi Penjualan nochifram)
         $eggSummary = OutboundIntegrationService::getEggOutboundSummary();
         $telurMasuk = $eggSummary['total_produced_crates'];
+        $telurMasukButir = $eggSummary['total_produced_eggs'];
         $telurKeluar = $eggSummary['total_keluar_peti'];
+        $telurKeluarKg = $eggSummary['total_keluar_kg'];
         $telurStok = $eggSummary['current_stock_peti'];
+        $telurStokButir = $eggSummary['current_stock_eggs'];
         $telurPetiSold = $eggSummary['peti_sold'];
         $telurKgSold = $eggSummary['kg_sold'];
         $telurRevenue = $eggSummary['total_revenue'];
@@ -47,10 +50,15 @@ class WarehouseController extends Controller
         // 2. Gudang Pakan (Terintegrasi Konsumsi Kandang & Penjualan Luar)
         $feedSummary = OutboundIntegrationService::getFeedOutboundSummary();
         $pakanMasuk = $feedSummary['purchased_kg'];
+        $pakanMasukKarung = $feedSummary['purchased_karung'];
         $pakanKeluar = $feedSummary['total_keluar_kg'];
+        $pakanTotalKarungKeluar = $feedSummary['total_keluar_karung'];
         $pakanStok = $feedSummary['current_stock_kg'];
+        $pakanStokKarung = $feedSummary['current_stock_karung'];
         $pakanKarungSold = $feedSummary['karung_sold'];
+        $pakanKgSold = $feedSummary['kg_sold'];
         $pakanConsumptionKg = $feedSummary['consumption_kg'];
+        $pakanConsumptionKarung = $feedSummary['consumption_karung'];
         $pakanRevenue = $feedSummary['total_revenue'];
 
         // 3. Gudang Obat, Vaksin & Vitamin (Satuan: Item / Botol)
@@ -70,8 +78,8 @@ class WarehouseController extends Controller
 
         return view('warehouse.index', compact(
             'user',
-            'telurMasuk', 'telurKeluar', 'telurStok', 'telurPetiSold', 'telurKgSold', 'telurRevenue',
-            'pakanMasuk', 'pakanKeluar', 'pakanStok', 'pakanKarungSold', 'pakanConsumptionKg', 'pakanRevenue',
+            'telurMasuk', 'telurMasukButir', 'telurKeluar', 'telurKeluarKg', 'telurStok', 'telurStokButir', 'telurPetiSold', 'telurKgSold', 'telurRevenue',
+            'pakanMasuk', 'pakanMasukKarung', 'pakanKeluar', 'pakanTotalKarungKeluar', 'pakanStok', 'pakanStokKarung', 'pakanKarungSold', 'pakanKgSold', 'pakanConsumptionKg', 'pakanConsumptionKarung', 'pakanRevenue',
             'obatMasuk', 'obatKeluar', 'obatStok',
             'recentTransactions', 'recentSales'
         ));

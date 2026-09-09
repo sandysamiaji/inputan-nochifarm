@@ -19,7 +19,7 @@
         <div class="flex flex-wrap items-center gap-2 sm:gap-4 bg-white px-4 py-2.5 rounded-2xl border border-slate-100 shadow-sm">
             <div class="text-left sm:text-right">
                 <span class="text-[10px] uppercase font-bold text-slate-400 block">Sisa Stok</span>
-                <span class="text-sm sm:text-base font-extrabold text-emerald-600">{{ number_format($stokSaatIni, 0, ',', '.') }} Kg</span>
+                <span class="text-sm sm:text-base font-extrabold text-emerald-600">{{ number_format($stokSaatIni, 0, ',', '.') }} Kg <span class="text-xs font-semibold text-emerald-700">({{ number_format(round($stokSaatIni / 50.0, 1), 0, ',', '.') }} Krg)</span></span>
             </div>
             <div class="hidden sm:block h-7 w-px bg-slate-200"></div>
             <div class="text-left sm:text-right">
@@ -29,14 +29,14 @@
             <div class="hidden sm:block h-7 w-px bg-slate-200"></div>
             <div class="text-left sm:text-right">
                 <span class="text-[10px] uppercase font-bold text-slate-500 block">Konsumsi Kandang</span>
-                <span class="text-xs sm:text-sm font-bold text-slate-700">{{ number_format($consumptionKg, 0, ',', '.') }} Kg</span>
+                <span class="text-xs sm:text-sm font-bold text-slate-700">{{ number_format($consumptionKg, 0, ',', '.') }} Kg ({{ number_format(round($consumptionKg / 50.0, 1), 0, ',', '.') }} Krg)</span>
             </div>
             <div class="hidden md:block h-7 w-px bg-slate-200"></div>
             <div class="hidden md:block text-right">
                 <span class="text-[10px] uppercase font-bold text-maroon-800 block flex items-center gap-1">
                     <i data-lucide="shopping-cart" class="w-3 h-3"></i> Terjual (nochifram)
                 </span>
-                <span class="text-xs sm:text-sm font-extrabold text-maroon-800">{{ number_format($karungSold, 0, ',', '.') }} Karung (Rp {{ number_format($soldRevenue, 0, ',', '.') }})</span>
+                <span class="text-xs sm:text-sm font-extrabold text-maroon-800">{{ number_format($karungSold, 0, ',', '.') }} Karung @if($kgSold > 0)& {{ number_format($kgSold, 0, ',', '.') }} Kg @endif(Rp {{ number_format($soldRevenue, 0, ',', '.') }})</span>
             </div>
         </div>
     </div>

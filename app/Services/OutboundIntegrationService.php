@@ -54,9 +54,27 @@ class OutboundIntegrationService
         $totalProducedCrates = (float) $prodQuery->sum('crates_count');
         $totalProducedEggs = (int) $prodQuery->sum('total_eggs');
 
+        // Fallback jika EggProduction 0 tapi FarmStock ada catatan masuk telur
+        $farmStockMasukQuery = FarmStock::where('category', 'telur')->where('type', 'masuk');
+        if ($startDate && $endDate) {
+            $farmStockMasukQuery->whereBetween('date', [$startDate, $endDate]);
+        }
+        $farmStockMasukPeti = (float) $farmStockMasukQuery->sum('quantity');
+        if ($totalProducedCrates == 0 && $farmStockMasukPeti > 0) {
+            $totalProducedCrates = $farmStockMasukPeti;
+        }
+        if ($totalProducedEggs == 0 && $totalProducedCrates > 0) {
+            $totalProducedEggs = (int) ($totalProducedCrates * 250);
+        }
+
         // Total telur keluar bersih
         $totalKeluarPeti = $petiSold + $manualKeluarPeti;
-        $currentStockPeti = max(0, $totalProducedCrates - $totalKeluarPeti);
+        $totalKeluarKg = $kgSold;
+        
+        // 1 Peti = 15 Kg
+        $kgInPeti = $totalKeluarKg > 0 ? ($totalKeluarKg / 15.0) : 0;
+        $currentStockPeti = max(0, round($totalProducedCrates - $totalKeluarPeti - $kgInPeti, 1));
+        $currentStockEggs = (int) ($currentStockPeti * 250);
 
         return [
             'peti_sold' => $petiSold,
@@ -65,9 +83,11 @@ class OutboundIntegrationService
             'transaction_count' => $transactionCount,
             'manual_keluar_peti' => $manualKeluarPeti,
             'total_keluar_peti' => $totalKeluarPeti,
+            'total_keluar_kg' => $totalKeluarKg,
             'total_produced_crates' => $totalProducedCrates,
             'total_produced_eggs' => $totalProducedEggs,
             'current_stock_peti' => $currentStockPeti,
+            'current_stock_eggs' => $currentStockEggs,
         ];
     }
 
@@ -123,8 +143,21 @@ class OutboundIntegrationService
         }
         $purchasedKarung = round($purchasedKg / 50.0, 1);
 
+        // 4. Mutasi manual keluar di FarmStock jika ada
+        $stockKeluarQuery = FarmStock::where('category', 'pakan')->where('type', 'keluar');
+        if ($startDate && $endDate) {
+            $stockKeluarQuery->whereBetween('date', [$startDate, $endDate]);
+        }
+        $manualKeluarKg = (float) $stockKeluarQuery->sum('quantity');
+
         // Total Pakan Keluar (Konsumsi Kandang + Penjualan Luar)
-        $totalKeluarKg = $consumptionKg + $soldInKg;
+        if ($consumptionKg > 0 || $soldInKg > 0) {
+            $totalKeluarKg = $consumptionKg + $soldInKg;
+        } else {
+            $totalKeluarKg = $manualKeluarKg > 0 ? $manualKeluarKg : 0.0;
+        }
+        
+        $totalKeluarKarung = round($totalKeluarKg / 50.0, 1);
         $currentStockKg = max(0, $purchasedKg - $totalKeluarKg);
         $currentStockKarung = round($currentStockKg / 50.0, 1);
 
@@ -138,6 +171,7 @@ class OutboundIntegrationService
             'purchased_kg' => $purchasedKg,
             'purchased_karung' => $purchasedKarung,
             'total_keluar_kg' => $totalKeluarKg,
+            'total_keluar_karung' => $totalKeluarKarung,
             'current_stock_kg' => $currentStockKg,
             'current_stock_karung' => $currentStockKarung,
         ];

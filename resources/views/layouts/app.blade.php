@@ -47,11 +47,26 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
+        html, body {
+            overflow-x: hidden;
+            max-width: 100vw;
+        }
+
         body {
             font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background-color: #f8fafc;
             color: #1e293b;
             -webkit-tap-highlight-color: transparent;
+        }
+
+        .hidden { display: none !important; }
+        @media (min-width: 640px) {
+            .sm\:flex { display: flex !important; }
+            .sm\:hidden { display: none !important; }
+        }
+        @media (min-width: 768px) {
+            .md\:flex { display: flex !important; }
+            .md\:hidden { display: none !important; }
         }
 
         /* Deep Maroon Gradient */
