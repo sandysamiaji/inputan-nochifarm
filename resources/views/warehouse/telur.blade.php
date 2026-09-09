@@ -19,12 +19,14 @@
         <div class="flex flex-wrap items-center gap-2 sm:gap-4 bg-white px-4 py-2.5 rounded-2xl border border-slate-100 shadow-sm">
             <div class="text-left sm:text-right">
                 <span class="text-[10px] uppercase font-bold text-slate-400 block">Sisa Stok</span>
-                <span class="text-sm sm:text-base font-extrabold text-emerald-600">{{ number_format($stokSaatIni, 0, ',', '.') }} Peti</span>
+                <span class="text-sm sm:text-base font-extrabold {{ $stokSaatIni < 0 ? 'text-rose-600' : 'text-emerald-600' }}">{{ number_format($stokSaatIni, 0, ',', '.') }} Peti</span>
+                <span class="text-[10px] block font-medium {{ $stokSaatIni < 0 ? 'text-rose-500' : 'text-slate-400' }}">({{ number_format($stokSaatIniKg, 0, ',', '.') }} Kg • {{ number_format($stokSaatIniButir, 0, ',', '.') }} Butir)</span>
             </div>
             <div class="hidden sm:block h-7 w-px bg-slate-200"></div>
             <div class="text-left sm:text-right">
                 <span class="text-[10px] uppercase font-bold text-slate-400 block">Total Masuk</span>
                 <span class="text-xs sm:text-sm font-bold text-slate-700">{{ number_format($totalMasuk, 0, ',', '.') }} Peti</span>
+                <span class="text-[10px] block text-slate-400 font-medium">({{ number_format($totalMasukKg, 0, ',', '.') }} Kg • {{ number_format($totalEggsCount, 0, ',', '.') }} Butir)</span>
             </div>
             <div class="hidden sm:block h-7 w-px bg-slate-200"></div>
             <div class="text-left sm:text-right">

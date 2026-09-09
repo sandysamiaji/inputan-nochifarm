@@ -39,9 +39,12 @@ class WarehouseController extends Controller
         $eggSummary = OutboundIntegrationService::getEggOutboundSummary();
         $telurMasuk = $eggSummary['total_produced_crates'];
         $telurMasukButir = $eggSummary['total_produced_eggs'];
+        $telurMasukKg = $eggSummary['total_produced_kg'];
         $telurKeluar = $eggSummary['total_keluar_peti'];
         $telurKeluarKg = $eggSummary['total_keluar_kg'];
+        $telurKeluarEggs = $eggSummary['total_keluar_eggs'];
         $telurStok = $eggSummary['current_stock_peti'];
+        $telurStokKgTotal = $eggSummary['current_stock_kg_total'];
         $telurStokButir = $eggSummary['current_stock_eggs'];
         $telurPetiSold = $eggSummary['peti_sold'];
         $telurKgSold = $eggSummary['kg_sold'];
@@ -61,10 +64,10 @@ class WarehouseController extends Controller
         $pakanConsumptionKarung = $feedSummary['consumption_karung'];
         $pakanRevenue = $feedSummary['total_revenue'];
 
-        // 3. Gudang Obat, Vaksin & Vitamin (Satuan: Item / Botol)
+        // 3. Gudang Obat, Vaksin & Vitamin (Satuan: Item / Botol) - Bisa minus jika keluar melebihi masuk
         $obatMasuk = (float) FarmStock::whereIn('category', ['obat', 'vaksin', 'vitamin'])->where('type', 'masuk')->sum('quantity');
         $obatKeluar = (float) FarmStock::whereIn('category', ['obat', 'vaksin', 'vitamin'])->where('type', 'keluar')->sum('quantity');
-        $obatStok = max(0, $obatMasuk - $obatKeluar);
+        $obatStok = round($obatMasuk - $obatKeluar, 1);
 
         // Mutasi stok internal terbaru
         $recentTransactions = FarmStock::with('user')
@@ -78,7 +81,7 @@ class WarehouseController extends Controller
 
         return view('warehouse.index', compact(
             'user',
-            'telurMasuk', 'telurMasukButir', 'telurKeluar', 'telurKeluarKg', 'telurStok', 'telurStokButir', 'telurPetiSold', 'telurKgSold', 'telurRevenue',
+            'telurMasuk', 'telurMasukButir', 'telurMasukKg', 'telurKeluar', 'telurKeluarKg', 'telurKeluarEggs', 'telurStok', 'telurStokKgTotal', 'telurStokButir', 'telurPetiSold', 'telurKgSold', 'telurRevenue',
             'pakanMasuk', 'pakanMasukKarung', 'pakanKeluar', 'pakanTotalKarungKeluar', 'pakanStok', 'pakanStokKarung', 'pakanKarungSold', 'pakanKgSold', 'pakanConsumptionKg', 'pakanConsumptionKarung', 'pakanRevenue',
             'obatMasuk', 'obatKeluar', 'obatStok',
             'recentTransactions', 'recentSales'
@@ -115,8 +118,12 @@ class WarehouseController extends Controller
         // Ringkasan Telur Terintegrasi Penjualan nochifram
         $eggSummary = OutboundIntegrationService::getEggOutboundSummary();
         $totalMasuk = $eggSummary['total_produced_crates'];
+        $totalMasukKg = $eggSummary['total_produced_kg'];
         $totalKeluar = $eggSummary['total_keluar_peti'];
+        $totalKeluarKg = $eggSummary['total_keluar_kg'];
         $stokSaatIni = $eggSummary['current_stock_peti'];
+        $stokSaatIniKg = $eggSummary['current_stock_kg_total'];
+        $stokSaatIniButir = $eggSummary['current_stock_eggs'];
         $petiSold = $eggSummary['peti_sold'];
         $kgSold = $eggSummary['kg_sold'];
         $totalRevenue = $eggSummary['total_revenue'];
@@ -131,7 +138,7 @@ class WarehouseController extends Controller
 
         return view('warehouse.telur', compact(
             'user', 'items', 'tab', 'search', 
-            'totalMasuk', 'totalKeluar', 'stokSaatIni', 
+            'totalMasuk', 'totalMasukKg', 'totalKeluar', 'totalKeluarKg', 'stokSaatIni', 'stokSaatIniKg', 'stokSaatIniButir',
             'petiSold', 'kgSold', 'totalRevenue', 'transactionCount', 'totalEggsCount',
             'salesList', 'tripList', 'coops'
         ));
@@ -221,7 +228,7 @@ class WarehouseController extends Controller
         // Ringkasan Obat, Vaksin & Vitamin
         $totalMasuk = (float) FarmStock::whereIn('category', ['obat', 'vaksin', 'vitamin'])->where('type', 'masuk')->sum('quantity');
         $totalKeluar = (float) FarmStock::whereIn('category', ['obat', 'vaksin', 'vitamin'])->where('type', 'keluar')->sum('quantity');
-        $stokSaatIni = max(0, $totalMasuk - $totalKeluar);
+        $stokSaatIni = round($totalMasuk - $totalKeluar, 1);
 
         $coops = Coop::where('is_active', true)->get();
 

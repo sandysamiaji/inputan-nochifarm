@@ -63,11 +63,12 @@
 
             <!-- Angka Masuk, Keluar, dan Stok Saat Ini (Grid 3 Kolom Responsif Sempurna) -->
             <div class="mt-4 pt-3 border-t border-slate-100 grid grid-cols-3 gap-1 sm:gap-2 items-start">
-                <!-- 1. Masuk -->
+                <!-- 1. Masuk (Peti, Kg & Butir) -->
                 <div class="space-y-0.5 min-w-0">
                     <div class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Masuk</div>
-                    <div class="text-xs sm:text-base font-bold text-slate-800 leading-tight">
-                        {{ number_format($telurMasuk, 0, ',', '.') }} <span class="text-[10px] sm:text-xs font-normal text-slate-500">Peti</span>
+                    <div class="text-xs sm:text-sm font-bold text-slate-800 leading-tight">
+                        <div>{{ number_format($telurMasuk, 0, ',', '.') }} <span class="text-[10px] font-normal text-slate-500">Peti</span></div>
+                        <div class="text-[11px] sm:text-xs text-slate-600 font-semibold">& {{ number_format($telurMasukKg, 0, ',', '.') }} <span class="text-[9px] font-normal text-slate-500">Kg</span></div>
                     </div>
                     <div class="text-[9px] sm:text-[10px] font-medium text-slate-400 truncate">
                         ({{ number_format($telurMasukButir, 0, ',', '.') }} Butir)
@@ -86,13 +87,14 @@
                     </div>
                 </div>
 
-                <!-- 3. Stok Saat Ini -->
+                <!-- 3. Stok Saat Ini (Peti, Kg, Butir - Mendukung Nilai Mines / Defisit) -->
                 <div class="text-right space-y-0.5 min-w-0">
                     <div class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Stok Saat Ini</div>
-                    <div class="text-xs sm:text-lg font-black text-emerald-600 leading-tight">
-                        {{ number_format($telurStok, 0, ',', '.') }} <span class="text-[10px] sm:text-xs font-bold text-emerald-700">Peti</span>
+                    <div class="text-xs sm:text-sm font-black leading-tight {{ $telurStok < 0 || $telurStokKgTotal < 0 ? 'text-rose-600' : 'text-emerald-600' }}">
+                        <div>{{ number_format($telurStok, 0, ',', '.') }} <span class="text-[10px] font-bold {{ $telurStok < 0 ? 'text-rose-600' : 'text-emerald-700' }}">Peti</span></div>
+                        <div class="text-[11px] sm:text-xs font-bold {{ $telurStokKgTotal < 0 ? 'text-rose-600' : 'text-emerald-600' }}">& {{ number_format($telurStokKgTotal, 0, ',', '.') }} <span class="text-[9px] font-normal text-slate-500">Kg</span></div>
                     </div>
-                    <div class="text-[9px] sm:text-[10px] font-semibold text-emerald-600 truncate">
+                    <div class="text-[9px] sm:text-[10px] font-semibold truncate {{ $telurStokButir < 0 ? 'text-rose-600' : 'text-emerald-600' }}">
                         ({{ number_format($telurStokButir, 0, ',', '.') }} Butir)
                     </div>
                 </div>
@@ -152,13 +154,13 @@
                     </div>
                 </div>
 
-                <!-- 3. Stok Saat Ini -->
+                <!-- 3. Stok Saat Ini (Mendukung Nilai Mines / Defisit) -->
                 <div class="text-right space-y-0.5 min-w-0">
                     <div class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Stok Saat Ini</div>
-                    <div class="text-xs sm:text-lg font-black text-emerald-600 leading-tight">
-                        {{ number_format($pakanStok, 0, ',', '.') }} <span class="text-[10px] sm:text-xs font-bold text-emerald-700">Kg</span>
+                    <div class="text-xs sm:text-lg font-black leading-tight {{ $pakanStok < 0 ? 'text-rose-600' : 'text-emerald-600' }}">
+                        {{ number_format($pakanStok, 0, ',', '.') }} <span class="text-[10px] sm:text-xs font-bold {{ $pakanStok < 0 ? 'text-rose-600' : 'text-emerald-700' }}">Kg</span>
                     </div>
-                    <div class="text-[9px] sm:text-[10px] font-semibold text-emerald-600 truncate">
+                    <div class="text-[9px] sm:text-[10px] font-semibold truncate {{ $pakanStokKarung < 0 ? 'text-rose-600' : 'text-emerald-600' }}">
                         ({{ number_format($pakanStokKarung, 0, ',', '.') }} Krg)
                     </div>
                 </div>
@@ -213,14 +215,14 @@
                     </div>
                 </div>
 
-                <!-- 3. Stok Saat Ini -->
+                <!-- 3. Stok Saat Ini (Mendukung Nilai Mines / Defisit) -->
                 <div class="text-right space-y-0.5 min-w-0 pl-1">
                     <div class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Stok Saat Ini</div>
-                    <div class="text-xs sm:text-xl font-extrabold text-emerald-600 leading-tight truncate">
-                        {{ number_format($obatStok, 0, ',', '.') }} <span class="text-[10px] sm:text-xs font-bold text-emerald-700">Item</span>
+                    <div class="text-xs sm:text-xl font-extrabold leading-tight truncate {{ $obatStok < 0 ? 'text-rose-600' : 'text-emerald-600' }}">
+                        {{ number_format($obatStok, 0, ',', '.') }} <span class="text-[10px] sm:text-xs font-bold {{ $obatStok < 0 ? 'text-rose-600' : 'text-emerald-700' }}">Item</span>
                     </div>
-                    <div class="text-[9px] sm:text-[10px] font-semibold text-emerald-600 truncate">
-                        Tersedia
+                    <div class="text-[9px] sm:text-[10px] font-semibold truncate {{ $obatStok < 0 ? 'text-rose-600' : 'text-emerald-600' }}">
+                        {{ $obatStok < 0 ? 'Defisit' : 'Tersedia' }}
                     </div>
                 </div>
             </div>

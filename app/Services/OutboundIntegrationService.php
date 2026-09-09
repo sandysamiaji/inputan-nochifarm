@@ -53,6 +53,7 @@ class OutboundIntegrationService
         }
         $totalProducedCrates = (float) $prodQuery->sum('crates_count');
         $totalProducedEggs = (int) $prodQuery->sum('total_eggs');
+        $totalProducedWeightKg = (float) $prodQuery->sum('weight_kg');
 
         // Fallback jika EggProduction 0 tapi FarmStock ada catatan masuk telur
         $farmStockMasukQuery = FarmStock::where('category', 'telur')->where('type', 'masuk');
@@ -65,16 +66,23 @@ class OutboundIntegrationService
         }
         if ($totalProducedEggs == 0 && $totalProducedCrates > 0) {
             $totalProducedEggs = (int) ($totalProducedCrates * 250);
+        } elseif ($totalProducedCrates > 0 && $totalProducedEggs < ($totalProducedCrates * 150)) {
+            // Sinkronisasi jika data butir di DB belum dikonversi penuh dari jumlah peti (1 Peti = 250 Butir)
+            $totalProducedEggs = (int) round($totalProducedCrates * 250);
         }
+
+        // Bobot telur masuk (1 Peti = 15 Kg)
+        $totalProducedKg = $totalProducedWeightKg > 0 ? $totalProducedWeightKg : round($totalProducedCrates * 15.0, 1);
 
         // Total telur keluar bersih
         $totalKeluarPeti = $petiSold + $manualKeluarPeti;
         $totalKeluarKg = $kgSold;
-        
-        // 1 Peti = 15 Kg
-        $kgInPeti = $totalKeluarKg > 0 ? ($totalKeluarKg / 15.0) : 0;
-        $currentStockPeti = max(0, round($totalProducedCrates - $totalKeluarPeti - $kgInPeti, 1));
-        $currentStockEggs = (int) ($currentStockPeti * 250);
+        $totalKeluarEggs = (int) (($totalKeluarPeti * 250) + ($totalKeluarKg * 16));
+
+        // Stok saat ini (bisa minus / defisit jika penjualan melebihi stok masuk)
+        $currentStockPeti = round($totalProducedCrates - $totalKeluarPeti, 1);
+        $currentStockKgTotal = round($totalProducedKg - ($totalKeluarPeti * 15.0) - $totalKeluarKg, 1);
+        $currentStockEggs = (int) round(($currentStockPeti * 250) - ($totalKeluarKg * 16));
 
         return [
             'peti_sold' => $petiSold,
@@ -84,9 +92,12 @@ class OutboundIntegrationService
             'manual_keluar_peti' => $manualKeluarPeti,
             'total_keluar_peti' => $totalKeluarPeti,
             'total_keluar_kg' => $totalKeluarKg,
+            'total_keluar_eggs' => $totalKeluarEggs,
             'total_produced_crates' => $totalProducedCrates,
             'total_produced_eggs' => $totalProducedEggs,
+            'total_produced_kg' => $totalProducedKg,
             'current_stock_peti' => $currentStockPeti,
+            'current_stock_kg_total' => $currentStockKgTotal,
             'current_stock_eggs' => $currentStockEggs,
         ];
     }
@@ -120,7 +131,7 @@ class OutboundIntegrationService
         $kgSold = (float) $queryKg->sum('sale_items.quantity');
         $totalRevenue = (float) $queryRevenue->sum('sales.total_amount');
 
-        // Asumsi 1 Karung = 50 Kg
+        // Asumsi standar industri peternakan: 1 Karung = 50 Kg
         $soldInKg = ($karungSold * 50.0) + $kgSold;
 
         // 2. Konsumsi Pakan oleh Ayam di Kandang
@@ -131,16 +142,12 @@ class OutboundIntegrationService
         $consumptionKg = (float) $consQuery->sum('quantity_kg');
         $consumptionKarung = round($consumptionKg / 50.0, 1);
 
-        // 3. Pakan Masuk (Pembelian Pakan dari FarmStock atau data awal)
+        // 3. Pakan Masuk MURNI dari input riil FarmStock (tanpa hardcoded fake baseline)
         $stockMasukQuery = FarmStock::where('category', 'pakan')->where('type', 'masuk');
         if ($startDate && $endDate) {
             $stockMasukQuery->whereBetween('date', [$startDate, $endDate]);
         }
         $purchasedKg = (float) $stockMasukQuery->sum('quantity');
-        if ($purchasedKg == 0) {
-            // Baseline 18.250 Kg (365 Karung)
-            $purchasedKg = 18250.0;
-        }
         $purchasedKarung = round($purchasedKg / 50.0, 1);
 
         // 4. Mutasi manual keluar di FarmStock jika ada
@@ -158,7 +165,9 @@ class OutboundIntegrationService
         }
         
         $totalKeluarKarung = round($totalKeluarKg / 50.0, 1);
-        $currentStockKg = max(0, $purchasedKg - $totalKeluarKg);
+
+        // Sisa stok pakan (bisa minus / defisit jika belum ada input pakan masuk)
+        $currentStockKg = round($purchasedKg - $totalKeluarKg, 1);
         $currentStockKarung = round($currentStockKg / 50.0, 1);
 
         return [
