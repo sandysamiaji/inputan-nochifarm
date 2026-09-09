@@ -63,7 +63,7 @@
 
             <!-- Angka Masuk, Keluar, dan Stok Saat Ini (Grid 3 Kolom Responsif Sempurna) -->
             <div class="mt-4 pt-3 border-t border-slate-100 grid grid-cols-3 gap-1 sm:gap-2 items-start">
-                <!-- 1. Masuk (Peti, Kg & Butir) -->
+                <!-- 1. Masuk (Peti & Kg) -->
                 <div class="space-y-0.5 min-w-0">
                     <div class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Masuk</div>
                     <div class="text-xs sm:text-sm font-bold text-slate-800 leading-tight">
@@ -71,7 +71,7 @@
                         <div class="text-[11px] sm:text-xs text-slate-600 font-semibold">& {{ number_format($telurMasukKg, 0, ',', '.') }} <span class="text-[9px] font-normal text-slate-500">Kg</span></div>
                     </div>
                     <div class="text-[9px] sm:text-[10px] font-medium text-slate-400 truncate">
-                        ({{ number_format($telurMasukButir, 0, ',', '.') }} Butir)
+                        Produksi Kandang
                     </div>
                 </div>
 
@@ -87,15 +87,15 @@
                     </div>
                 </div>
 
-                <!-- 3. Stok Saat Ini (Peti, Kg, Butir - Mendukung Nilai Mines / Defisit) -->
+                <!-- 3. Stok Saat Ini (Peti & Kg - Mendukung Nilai Mines / Defisit) -->
                 <div class="text-right space-y-0.5 min-w-0">
                     <div class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Stok Saat Ini</div>
                     <div class="text-xs sm:text-sm font-black leading-tight {{ $telurStok < 0 || $telurStokKgTotal < 0 ? 'text-rose-600' : 'text-emerald-600' }}">
                         <div>{{ number_format($telurStok, 0, ',', '.') }} <span class="text-[10px] font-bold {{ $telurStok < 0 ? 'text-rose-600' : 'text-emerald-700' }}">Peti</span></div>
                         <div class="text-[11px] sm:text-xs font-bold {{ $telurStokKgTotal < 0 ? 'text-rose-600' : 'text-emerald-600' }}">& {{ number_format($telurStokKgTotal, 0, ',', '.') }} <span class="text-[9px] font-normal text-slate-500">Kg</span></div>
                     </div>
-                    <div class="text-[9px] sm:text-[10px] font-semibold truncate {{ $telurStokButir < 0 ? 'text-rose-600' : 'text-emerald-600' }}">
-                        ({{ number_format($telurStokButir, 0, ',', '.') }} Butir)
+                    <div class="text-[9px] sm:text-[10px] font-semibold truncate {{ $telurStok < 0 || $telurStokKgTotal < 0 ? 'text-rose-600' : 'text-emerald-600' }}">
+                        {{ $telurStok < 0 || $telurStokKgTotal < 0 ? 'Defisit Stok' : 'Tersedia' }}
                     </div>
                 </div>
             </div>

@@ -39,12 +39,19 @@ class OutboundIntegrationService
         $totalRevenue = (float) $queryRevenue->sum('sales.total_amount');
         $transactionCount = (int) $queryRevenue->count();
 
-        // Mutasi keluar manual farm_stocks jika ada
-        $manualKeluarQuery = FarmStock::where('category', 'telur')->where('type', 'keluar');
+        // Mutasi keluar manual farm_stocks jika ada (Peti & Kg terpisah)
+        $manualKeluarPetiQuery = FarmStock::where('category', 'telur')->where('type', 'keluar')->where(function ($q) {
+            $q->where('unit', 'Peti')->orWhere('unit', 'peti');
+        });
+        $manualKeluarKgQuery = FarmStock::where('category', 'telur')->where('type', 'keluar')->where(function ($q) {
+            $q->where('unit', 'Kg')->orWhere('unit', 'kg');
+        });
         if ($startDate && $endDate) {
-            $manualKeluarQuery->whereBetween('date', [$startDate, $endDate]);
+            $manualKeluarPetiQuery->whereBetween('date', [$startDate, $endDate]);
+            $manualKeluarKgQuery->whereBetween('date', [$startDate, $endDate]);
         }
-        $manualKeluarPeti = (float) $manualKeluarQuery->sum('quantity');
+        $manualKeluarPeti = (float) $manualKeluarPetiQuery->sum('quantity');
+        $manualKeluarKg = (float) $manualKeluarKgQuery->sum('quantity');
 
         // Total produksi telur kandang (Barang Masuk)
         $prodQuery = EggProduction::query();
@@ -55,34 +62,33 @@ class OutboundIntegrationService
         $totalProducedEggs = (int) $prodQuery->sum('total_eggs');
         $totalProducedWeightKg = (float) $prodQuery->sum('weight_kg');
 
-        // Fallback jika EggProduction 0 tapi FarmStock ada catatan masuk telur
-        $farmStockMasukQuery = FarmStock::where('category', 'telur')->where('type', 'masuk');
+        // Mutasi masuk manual farm_stocks jika ada (Peti & Kg terpisah)
+        $farmStockMasukPetiQuery = FarmStock::where('category', 'telur')->where('type', 'masuk')->where(function ($q) {
+            $q->where('unit', 'Peti')->orWhere('unit', 'peti');
+        });
+        $farmStockMasukKgQuery = FarmStock::where('category', 'telur')->where('type', 'masuk')->where(function ($q) {
+            $q->where('unit', 'Kg')->orWhere('unit', 'kg');
+        });
         if ($startDate && $endDate) {
-            $farmStockMasukQuery->whereBetween('date', [$startDate, $endDate]);
+            $farmStockMasukPetiQuery->whereBetween('date', [$startDate, $endDate]);
+            $farmStockMasukKgQuery->whereBetween('date', [$startDate, $endDate]);
         }
-        $farmStockMasukPeti = (float) $farmStockMasukQuery->sum('quantity');
-        if ($totalProducedCrates == 0 && $farmStockMasukPeti > 0) {
-            $totalProducedCrates = $farmStockMasukPeti;
-        }
-        if ($totalProducedEggs == 0 && $totalProducedCrates > 0) {
-            $totalProducedEggs = (int) ($totalProducedCrates * 250);
-        } elseif ($totalProducedCrates > 0 && $totalProducedEggs < ($totalProducedCrates * 150)) {
-            // Sinkronisasi jika data butir di DB belum dikonversi penuh dari jumlah peti (1 Peti = 250 Butir)
-            $totalProducedEggs = (int) round($totalProducedCrates * 250);
-        }
+        $farmStockMasukPeti = (float) $farmStockMasukPetiQuery->sum('quantity');
+        $farmStockMasukKg = (float) $farmStockMasukKgQuery->sum('quantity');
 
-        // Bobot telur masuk (1 Peti = 15 Kg)
-        $totalProducedKg = $totalProducedWeightKg > 0 ? $totalProducedWeightKg : round($totalProducedCrates * 15.0, 1);
+        // Total telur masuk bersih (Peti & Kg)
+        $totalMasukPeti = $totalProducedCrates + $farmStockMasukPeti;
+        $totalMasukKg = $totalProducedWeightKg + $farmStockMasukKg;
 
-        // Total telur keluar bersih
+        // Total telur keluar bersih (Peti & Kg)
         $totalKeluarPeti = $petiSold + $manualKeluarPeti;
-        $totalKeluarKg = $kgSold;
-        $totalKeluarEggs = (int) (($totalKeluarPeti * 250) + ($totalKeluarKg * 16));
+        $totalKeluarKg = $kgSold + $manualKeluarKg;
+        $totalKeluarEggs = 0;
 
-        // Stok saat ini (bisa minus / defisit jika penjualan melebihi stok masuk)
-        $currentStockPeti = round($totalProducedCrates - $totalKeluarPeti, 1);
-        $currentStockKgTotal = round($totalProducedKg - ($totalKeluarPeti * 15.0) - $totalKeluarKg, 1);
-        $currentStockEggs = (int) round(($currentStockPeti * 250) - ($totalKeluarKg * 16));
+        // Stok saat ini (Peti & Kg terpisah secara presisi, tanpa double-counting atau butir)
+        $currentStockPeti = round($totalMasukPeti - $totalKeluarPeti, 1);
+        $currentStockKgTotal = round($totalMasukKg - $totalKeluarKg, 1);
+        $currentStockEggs = 0;
 
         return [
             'peti_sold' => $petiSold,
@@ -90,12 +96,13 @@ class OutboundIntegrationService
             'total_revenue' => $totalRevenue,
             'transaction_count' => $transactionCount,
             'manual_keluar_peti' => $manualKeluarPeti,
+            'manual_keluar_kg' => $manualKeluarKg,
             'total_keluar_peti' => $totalKeluarPeti,
             'total_keluar_kg' => $totalKeluarKg,
             'total_keluar_eggs' => $totalKeluarEggs,
-            'total_produced_crates' => $totalProducedCrates,
+            'total_produced_crates' => $totalMasukPeti,
             'total_produced_eggs' => $totalProducedEggs,
-            'total_produced_kg' => $totalProducedKg,
+            'total_produced_kg' => $totalMasukKg,
             'current_stock_peti' => $currentStockPeti,
             'current_stock_kg_total' => $currentStockKgTotal,
             'current_stock_eggs' => $currentStockEggs,
