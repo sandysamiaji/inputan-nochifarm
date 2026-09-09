@@ -8,9 +8,12 @@ use App\Models\FeedConsumption;
 use App\Models\Mortality;
 use App\Models\WeightSample;
 use App\Models\HealthTreatment;
+use App\Models\FarmStock;
 use App\Models\User;
+use App\Services\OutboundIntegrationService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class RekapController extends Controller
 {
@@ -137,33 +140,152 @@ class RekapController extends Controller
         $healthQuery = HealthTreatment::whereBetween('date', [$startDate, $endDate]);
         $totalVaksinKegiatan = $healthQuery->count();
 
-        // 6. Data Grafik Tren Harian (Line Chart)
+        // 6. Ringkasan Barang Keluar (Penjualan nochifram) pada periode terpilih
+        $eggSalesSummary = OutboundIntegrationService::getEggOutboundSummary($startDate, $endDate);
+        $feedSalesSummary = OutboundIntegrationService::getFeedOutboundSummary($startDate, $endDate);
+        $totalTelurSoldPeti = $eggSalesSummary['peti_sold'];
+        $totalTelurSoldKg = $eggSalesSummary['kg_sold'];
+        $totalPakanSoldKarung = $feedSalesSummary['karung_sold'];
+        $totalPakanSoldKg = $feedSalesSummary['kg_sold'];
+        $totalSalesRevenue = $eggSalesSummary['total_revenue'] + $feedSalesSummary['total_revenue'];
+
+        // 7. Data Grafik Tren Harian (Line Chart) Masuk vs Keluar
         $chartLabels = [];
-        $chartEggPeti = [];
-        $chartEggButir = [];
-        $chartFeedKg = [];
+        $chartEggPetiMasuk = [];
+        $chartEggPetiKeluar = [];
+        $chartEggKgMasuk = [];
+        $chartEggKgKeluar = [];
+        $chartEggButirMasuk = [];
+        $chartEggButirKeluar = [];
+
+        $chartFeedKgMasuk = [];
+        $chartFeedKgKeluar = [];
+        $chartFeedKarungMasuk = [];
+        $chartFeedKarungKeluar = [];
+
         $chartMortality = [];
 
+        // Pre-query data terkelompok untuk efisiensi tinggi
+        $eggProdByDate = EggProduction::whereBetween('date', [$startDate, $endDate])
+            ->select(
+                DB::raw('DATE(date) as dt'),
+                DB::raw('SUM(crates_count) as total_crates'),
+                DB::raw('SUM(weight_kg) as total_weight'),
+                DB::raw('SUM(total_eggs) as total_eggs')
+            )
+            ->groupBy(DB::raw('DATE(date)'))
+            ->get()
+            ->keyBy('dt');
+
+        $farmStockByDate = FarmStock::whereBetween('date', [$startDate, $endDate])
+            ->select(
+                DB::raw('DATE(date) as dt'),
+                'category',
+                'type',
+                DB::raw('SUM(quantity) as total_qty')
+            )
+            ->groupBy(DB::raw('DATE(date)'), 'category', 'type')
+            ->get()
+            ->groupBy('dt');
+
+        $salesByDate = DB::table('sale_items')
+            ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
+            ->whereBetween('sales.date', [$startDate, $endDate])
+            ->select(
+                'sales.date as dt',
+                'sales.category',
+                'sale_items.unit',
+                DB::raw('SUM(sale_items.quantity) as total_qty')
+            )
+            ->groupBy('sales.date', 'sales.category', 'sale_items.unit')
+            ->get()
+            ->groupBy('dt');
+
+        $feedConsByDate = FeedConsumption::whereBetween('date', [$startDate, $endDate])
+            ->select(
+                DB::raw('DATE(date) as dt'),
+                DB::raw('SUM(quantity_kg) as total_kg')
+            )
+            ->groupBy(DB::raw('DATE(date)'))
+            ->get()
+            ->keyBy('dt');
+
+        $mortalityByDate = Mortality::whereBetween('date', [$startDate, $endDate])
+            ->select(
+                DB::raw('DATE(date) as dt'),
+                DB::raw('SUM(count) as total_count')
+            )
+            ->groupBy(DB::raw('DATE(date)'))
+            ->get()
+            ->keyBy('dt');
+
         $diffDays = $startCarbon->diffInDays($endCarbon);
-        // Batasi label maksimal 31 hari agar grafik tetap jernih
         $step = max(1, (int) ceil($diffDays / 31));
+
+        $bulanShort = [
+            1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr', 5 => 'Mei', 6 => 'Jun',
+            7 => 'Jul', 8 => 'Agt', 9 => 'Sep', 10 => 'Okt', 11 => 'Nov', 12 => 'Des'
+        ];
 
         $cursor = $startCarbon->copy();
         while ($cursor->lte($endCarbon)) {
             $curDate = $cursor->toDateString();
-            
-            // Format label e.g. "10 Agt" atau "10"
-            $chartLabels[] = $cursor->format('d');
+            $chartLabels[] = $cursor->day . ' ' . ($bulanShort[$cursor->month] ?? $cursor->format('M'));
 
-            $dailyEggs = EggProduction::whereDate('date', $curDate)->get();
-            $chartEggPeti[] = (float) $dailyEggs->sum('crates_count');
-            $chartEggButir[] = (int) $dailyEggs->sum('total_eggs');
+            // TELUR MASUK
+            $ep = $eggProdByDate->get($curDate);
+            $eggProdPeti = $ep ? (float) $ep->total_crates : 0.0;
+            $eggProdKg = $ep ? (float) $ep->total_weight : 0.0;
+            $eggProdButir = $ep ? (int) $ep->total_eggs : 0;
 
-            $dailyFeeds = FeedConsumption::whereDate('date', $curDate)->get();
-            $chartFeedKg[] = (float) $dailyFeeds->sum('quantity_kg');
+            $fsDay = $farmStockByDate->get($curDate, collect());
+            $eggManualMasuk = (float) $fsDay->where('category', 'telur')->where('type', 'masuk')->sum('total_qty');
+            $eggManualKeluar = (float) $fsDay->where('category', 'telur')->where('type', 'keluar')->sum('total_qty');
 
-            $dailyMortality = Mortality::whereDate('date', $curDate)->get();
-            $chartMortality[] = (int) $dailyMortality->sum('count');
+            $eggPetiMasuk = $eggProdPeti + $eggManualMasuk;
+            $eggKgMasuk = $eggProdKg > 0 ? $eggProdKg : round($eggPetiMasuk * 15.0, 1);
+            $eggButirMasuk = $eggProdButir > 0 ? $eggProdButir : (int) round($eggPetiMasuk * 250);
+
+            // TELUR KELUAR (Penjualan nochifram + Manual)
+            $salesDay = $salesByDate->get($curDate, collect());
+            $salesTelurDay = $salesDay->where('category', 'telur');
+            $salesPeti = (float) $salesTelurDay->where('unit', 'Peti')->sum('total_qty');
+            $salesKg = (float) $salesTelurDay->where('unit', 'Kg')->sum('total_qty');
+
+            $eggPetiKeluar = $salesPeti + $eggManualKeluar;
+            $eggKgKeluar = round(($eggPetiKeluar * 15.0) + $salesKg, 1);
+            $eggButirKeluar = (int) round(($eggPetiKeluar * 250) + ($salesKg * 16));
+
+            $chartEggPetiMasuk[] = $eggPetiMasuk;
+            $chartEggPetiKeluar[] = $eggPetiKeluar;
+            $chartEggKgMasuk[] = $eggKgMasuk;
+            $chartEggKgKeluar[] = $eggKgKeluar;
+            $chartEggButirMasuk[] = $eggButirMasuk;
+            $chartEggButirKeluar[] = $eggButirKeluar;
+
+            // PAKAN MASUK
+            $feedKgMasuk = (float) $fsDay->where('category', 'pakan')->where('type', 'masuk')->sum('total_qty');
+            $feedKarungMasuk = round($feedKgMasuk / 50.0, 1);
+
+            // PAKAN KELUAR (Konsumsi Ayam + Penjualan Luar + Manual)
+            $fc = $feedConsByDate->get($curDate);
+            $feedConsumption = $fc ? (float) $fc->total_kg : 0.0;
+            $salesPakanDay = $salesDay->where('category', 'pakan');
+            $feedSalesKarung = (float) $salesPakanDay->where('unit', 'Karung')->sum('total_qty');
+            $feedSalesKg = (float) $salesPakanDay->where('unit', 'Kg')->sum('total_qty');
+            $feedManualKeluar = (float) $fsDay->where('category', 'pakan')->where('type', 'keluar')->sum('total_qty');
+
+            $feedKgKeluar = round($feedConsumption + ($feedSalesKarung * 50.0) + $feedSalesKg + $feedManualKeluar, 1);
+            $feedKarungKeluar = round($feedKgKeluar / 50.0, 1);
+
+            $chartFeedKgMasuk[] = $feedKgMasuk;
+            $chartFeedKgKeluar[] = $feedKgKeluar;
+            $chartFeedKarungMasuk[] = $feedKarungMasuk;
+            $chartFeedKarungKeluar[] = $feedKarungKeluar;
+
+            // MORTALITAS
+            $m = $mortalityByDate->get($curDate);
+            $chartMortality[] = $m ? (int) $m->total_count : 0;
 
             $cursor->addDays($step);
         }
@@ -173,7 +295,14 @@ class RekapController extends Controller
             'startDate', 'endDate', 'preset', 'formattedRange',
             'totalTelurPeti', 'totalTelurButir', 'totalTelurBroken', 'totalTelurGood',
             'totalPakanKg', 'totalMortalitas', 'avgBobot', 'totalVaksinKegiatan',
-            'chartLabels', 'chartEggPeti', 'chartEggButir', 'chartFeedKg', 'chartMortality'
+            'totalTelurSoldPeti', 'totalTelurSoldKg', 'totalPakanSoldKarung', 'totalPakanSoldKg', 'totalSalesRevenue',
+            'chartLabels',
+            'chartEggPetiMasuk', 'chartEggPetiKeluar',
+            'chartEggKgMasuk', 'chartEggKgKeluar',
+            'chartEggButirMasuk', 'chartEggButirKeluar',
+            'chartFeedKgMasuk', 'chartFeedKgKeluar',
+            'chartFeedKarungMasuk', 'chartFeedKarungKeluar',
+            'chartMortality'
         ));
     }
 

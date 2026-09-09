@@ -114,6 +114,11 @@
                     <div class="text-[11px] text-slate-400 mt-0.5">
                         ({{ number_format($totalTelurButir, 0, ',', '.') }} Butir)
                     </div>
+                    @if($totalTelurSoldPeti > 0 || $totalTelurSoldKg > 0)
+                        <div class="mt-1 text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md inline-block">
+                            Keluar: {{ number_format($totalTelurSoldPeti, 0, ',', '.') }} Peti @if($totalTelurSoldKg > 0)& {{ number_format($totalTelurSoldKg, 0, ',', '.') }} Kg @endif
+                        </div>
+                    @endif
                 </div>
                 <div class="w-11 h-11 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
                     <svg class="w-6 h-6 fill-amber-500 drop-shadow-sm" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -135,6 +140,14 @@
                     <div class="text-lg sm:text-xl font-black text-slate-900 mt-1">
                         {{ number_format($totalPakanKg, 0, ',', '.') }} <span class="text-xs font-bold text-slate-500">Kg</span>
                     </div>
+                    <div class="text-[11px] text-slate-400 mt-0.5">
+                        ({{ number_format(round($totalPakanKg / 50.0, 1), 0, ',', '.') }} Krg Kandang)
+                    </div>
+                    @if($totalPakanSoldKarung > 0)
+                        <div class="mt-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md inline-block">
+                            Terjual: {{ number_format($totalPakanSoldKarung, 0, ',', '.') }} Krg
+                        </div>
+                    @endif
                 </div>
                 <div class="w-11 h-11 rounded-2xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
                     <svg class="w-6 h-6 fill-emerald-600 drop-shadow-sm" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -208,21 +221,32 @@
 
     </div>
 
-    <!-- 3. GRAFIK TREN INTERAKTIF (Sesuai Mockup Layar 3: Grafik Produksi Telur) -->
+    <!-- 3. GRAFIK TREN INTERAKTIF (Masuk vs Keluar: Peti, Kg, Butir & Pakan) -->
     <div class="farm-card p-5 sm:p-6">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
             <div>
-                <h3 class="font-extrabold text-slate-800 text-sm sm:text-base tracking-tight" id="chartTitle">GRAFIK PRODUKSI TELUR</h3>
-                <p class="text-[11px] text-slate-400">Tren harian performa kandang pada periode terpilih</p>
+                <div class="flex items-center gap-2">
+                    <h3 class="font-extrabold text-slate-800 text-sm sm:text-base tracking-tight" id="chartTitle">GRAFIK TREN TELUR (PETI)</h3>
+                    <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">Masuk vs Keluar</span>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-0.5" id="chartSubtitle">Tren harian telur masuk (produksi) vs telur keluar (penjualan)</p>
             </div>
 
             <!-- Filter Switcher Grafik -->
             <div class="flex items-center gap-2">
-                <select id="selectChartMetric" onchange="updateChartMetric(this.value)" class="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 bg-white shadow-sm focus:ring-2 focus:ring-maroon-800/20 focus:border-maroon-800">
-                    <option value="egg_peti" selected>Produksi Telur (Peti)</option>
-                    <option value="egg_butir">Produksi Telur (Butir)</option>
-                    <option value="feed">Pemakaian Pakan (Kg)</option>
-                    <option value="mortality">Mortalitas (Ekor)</option>
+                <select id="selectChartMetric" onchange="updateChartMetric(this.value)" class="px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 bg-white shadow-sm focus:ring-2 focus:ring-maroon-800/20 focus:border-maroon-800">
+                    <optgroup label="Produksi & Penjualan Telur">
+                        <option value="egg_peti" selected>Telur: Peti (Masuk vs Keluar)</option>
+                        <option value="egg_kg">Telur: Kg (Masuk vs Keluar)</option>
+                        <option value="egg_butir">Telur: Butir (Masuk vs Keluar)</option>
+                    </optgroup>
+                    <optgroup label="Pakan Ternak">
+                        <option value="feed_kg">Pakan: Kg (Masuk vs Keluar)</option>
+                        <option value="feed_karung">Pakan: Karung (Masuk vs Keluar)</option>
+                    </optgroup>
+                    <optgroup label="Kondisi Kandang">
+                        <option value="mortality">Mortalitas Ayam (Ekor)</option>
+                    </optgroup>
                 </select>
                 <span id="chartUnitBadge" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-600">
                     Peti
@@ -231,7 +255,7 @@
         </div>
 
         <!-- Canvas Chart -->
-        <div class="mt-5 relative w-full" style="height: 280px;">
+        <div class="mt-5 relative w-full" style="height: 310px;">
             <canvas id="rekapTrendChart"></canvas>
         </div>
     </div>
@@ -360,40 +384,209 @@
 
 @push('scripts')
 <script>
-    // 1. DATA UNTUK GRAFIK
+    // 1. DATA UNTUK GRAFIK (Mendukung Garis Masuk & Garis Keluar: Peti, Kg, Butir & Pakan)
     const chartLabels = {!! json_encode($chartLabels) !!};
     const chartDataSets = {
         'egg_peti': {
-            label: 'Produksi Telur (Peti)',
+            title: 'GRAFIK TREN TELUR (PETI)',
+            subtitle: 'Tren harian telur masuk (produksi) vs telur keluar (penjualan) dalam satuan Peti',
             unit: 'Peti',
-            title: 'GRAFIK PRODUKSI TELUR',
-            data: {!! json_encode($chartEggPeti) !!},
-            borderColor: '#800020',
-            backgroundColor: 'rgba(128, 0, 32, 0.08)',
+            datasets: [
+                {
+                    label: 'Produksi Masuk',
+                    data: {!! json_encode($chartEggPetiMasuk) !!},
+                    borderColor: '#800020', // Maroon
+                    backgroundColor: 'rgba(128, 0, 32, 0.08)',
+                    borderWidth: 2.8,
+                    tension: 0.35,
+                    fill: true,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#800020',
+                    pointBorderWidth: 2.5,
+                    pointRadius: 4.5,
+                    pointHoverRadius: 6.5,
+                },
+                {
+                    label: 'Telur Keluar / Terjual',
+                    data: {!! json_encode($chartEggPetiKeluar) !!},
+                    borderColor: '#f59e0b', // Amber / Orange
+                    backgroundColor: 'rgba(245, 158, 11, 0.05)',
+                    borderWidth: 2.8,
+                    borderDash: [5, 4],
+                    tension: 0.35,
+                    fill: false,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#f59e0b',
+                    pointBorderWidth: 2.5,
+                    pointRadius: 4.5,
+                    pointHoverRadius: 6.5,
+                }
+            ]
+        },
+        'egg_kg': {
+            title: 'GRAFIK TREN TELUR (KG)',
+            subtitle: 'Tren harian total bobot telur masuk vs keluar dalam satuan Kilogram',
+            unit: 'Kg',
+            datasets: [
+                {
+                    label: 'Bobot Masuk (Kg)',
+                    data: {!! json_encode($chartEggKgMasuk) !!},
+                    borderColor: '#800020',
+                    backgroundColor: 'rgba(128, 0, 32, 0.08)',
+                    borderWidth: 2.8,
+                    tension: 0.35,
+                    fill: true,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#800020',
+                    pointBorderWidth: 2.5,
+                    pointRadius: 4.5,
+                    pointHoverRadius: 6.5,
+                },
+                {
+                    label: 'Bobot Keluar / Terjual (Kg)',
+                    data: {!! json_encode($chartEggKgKeluar) !!},
+                    borderColor: '#ea580c', // Orange
+                    backgroundColor: 'rgba(234, 88, 12, 0.05)',
+                    borderWidth: 2.8,
+                    borderDash: [5, 4],
+                    tension: 0.35,
+                    fill: false,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#ea580c',
+                    pointBorderWidth: 2.5,
+                    pointRadius: 4.5,
+                    pointHoverRadius: 6.5,
+                }
+            ]
         },
         'egg_butir': {
-            label: 'Produksi Telur (Butir)',
+            title: 'GRAFIK TREN TELUR (BUTIR)',
+            subtitle: 'Tren harian butir telur diproduksi vs butir telur terjual',
             unit: 'Butir',
-            title: 'GRAFIK BUTIR TELUR',
-            data: {!! json_encode($chartEggButir) !!},
-            borderColor: '#b8324b',
-            backgroundColor: 'rgba(184, 50, 75, 0.08)',
+            datasets: [
+                {
+                    label: 'Butir Masuk',
+                    data: {!! json_encode($chartEggButirMasuk) !!},
+                    borderColor: '#991b1b',
+                    backgroundColor: 'rgba(153, 27, 27, 0.08)',
+                    borderWidth: 2.8,
+                    tension: 0.35,
+                    fill: true,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#991b1b',
+                    pointBorderWidth: 2.5,
+                    pointRadius: 4.5,
+                    pointHoverRadius: 6.5,
+                },
+                {
+                    label: 'Butir Keluar / Terjual',
+                    data: {!! json_encode($chartEggButirKeluar) !!},
+                    borderColor: '#f97316',
+                    backgroundColor: 'rgba(249, 115, 22, 0.05)',
+                    borderWidth: 2.8,
+                    borderDash: [5, 4],
+                    tension: 0.35,
+                    fill: false,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#f97316',
+                    pointBorderWidth: 2.5,
+                    pointRadius: 4.5,
+                    pointHoverRadius: 6.5,
+                }
+            ]
         },
-        'feed': {
-            label: 'Pemakaian Pakan (Kg)',
+        'feed_kg': {
+            title: 'GRAFIK TREN PAKAN (KG)',
+            subtitle: 'Tren harian pakan masuk vs pakan keluar (konsumsi kandang & penjualan) dalam Kg',
             unit: 'Kg',
-            title: 'GRAFIK PEMAKAIAN PAKAN',
-            data: {!! json_encode($chartFeedKg) !!},
-            borderColor: '#059669',
-            backgroundColor: 'rgba(5, 150, 105, 0.08)',
+            datasets: [
+                {
+                    label: 'Pakan Masuk / Beli (Kg)',
+                    data: {!! json_encode($chartFeedKgMasuk) !!},
+                    borderColor: '#059669', // Emerald
+                    backgroundColor: 'rgba(5, 150, 105, 0.08)',
+                    borderWidth: 2.8,
+                    tension: 0.35,
+                    fill: true,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#059669',
+                    pointBorderWidth: 2.5,
+                    pointRadius: 4.5,
+                    pointHoverRadius: 6.5,
+                },
+                {
+                    label: 'Total Pakan Keluar (Kg)',
+                    data: {!! json_encode($chartFeedKgKeluar) !!},
+                    borderColor: '#e11d48', // Rose Red
+                    backgroundColor: 'rgba(225, 29, 72, 0.05)',
+                    borderWidth: 2.8,
+                    borderDash: [5, 4],
+                    tension: 0.35,
+                    fill: false,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#e11d48',
+                    pointBorderWidth: 2.5,
+                    pointRadius: 4.5,
+                    pointHoverRadius: 6.5,
+                }
+            ]
+        },
+        'feed_karung': {
+            title: 'GRAFIK TREN PAKAN (KARUNG)',
+            subtitle: 'Tren harian pakan masuk vs keluar dalam satuan Karung (@50 Kg)',
+            unit: 'Karung',
+            datasets: [
+                {
+                    label: 'Pakan Masuk (Karung)',
+                    data: {!! json_encode($chartFeedKarungMasuk) !!},
+                    borderColor: '#059669',
+                    backgroundColor: 'rgba(5, 150, 105, 0.08)',
+                    borderWidth: 2.8,
+                    tension: 0.35,
+                    fill: true,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#059669',
+                    pointBorderWidth: 2.5,
+                    pointRadius: 4.5,
+                    pointHoverRadius: 6.5,
+                },
+                {
+                    label: 'Total Pakan Keluar (Karung)',
+                    data: {!! json_encode($chartFeedKarungKeluar) !!},
+                    borderColor: '#e11d48',
+                    backgroundColor: 'rgba(225, 29, 72, 0.05)',
+                    borderWidth: 2.8,
+                    borderDash: [5, 4],
+                    tension: 0.35,
+                    fill: false,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#e11d48',
+                    pointBorderWidth: 2.5,
+                    pointRadius: 4.5,
+                    pointHoverRadius: 6.5,
+                }
+            ]
         },
         'mortality': {
-            label: 'Mortalitas Ayam (Ekor)',
-            unit: 'Ekor',
             title: 'GRAFIK MORTALITAS AYAM',
-            data: {!! json_encode($chartMortality) !!},
-            borderColor: '#e11d48',
-            backgroundColor: 'rgba(225, 29, 72, 0.08)',
+            subtitle: 'Tren harian kematian atau afkir ayam (ekor) per hari',
+            unit: 'Ekor',
+            datasets: [
+                {
+                    label: 'Mortalitas (Ekor)',
+                    data: {!! json_encode($chartMortality) !!},
+                    borderColor: '#e11d48',
+                    backgroundColor: 'rgba(225, 29, 72, 0.08)',
+                    borderWidth: 2.8,
+                    tension: 0.35,
+                    fill: true,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#e11d48',
+                    pointBorderWidth: 2.5,
+                    pointRadius: 4.5,
+                    pointHoverRadius: 6.5,
+                }
+            ]
         }
     };
 
@@ -411,38 +604,56 @@
             type: 'line',
             data: {
                 labels: chartLabels,
-                datasets: [{
-                    label: metric.label,
-                    data: metric.data,
-                    borderColor: metric.borderColor,
-                    backgroundColor: metric.backgroundColor,
-                    borderWidth: 2.8,
-                    tension: 0.38, // Smooth curve matching mockup
-                    fill: true,
-                    pointBackgroundColor: '#ffffff',
-                    pointBorderColor: metric.borderColor,
-                    pointBorderWidth: 2.5,
-                    pointRadius: 4.5,
-                    pointHoverRadius: 6.5,
-                }]
+                datasets: metric.datasets
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
                 plugins: {
                     legend: {
-                        display: false
+                        display: metric.datasets.length > 1,
+                        position: 'top',
+                        align: window.innerWidth < 640 ? 'center' : 'end',
+                        labels: {
+                            usePointStyle: true,
+                            boxWidth: 7,
+                            boxHeight: 7,
+                            padding: window.innerWidth < 640 ? 10 : 15,
+                            font: { size: window.innerWidth < 640 ? 10 : 11, family: 'Plus Jakarta Sans', weight: 'bold' }
+                        }
                     },
                     tooltip: {
                         backgroundColor: '#1e293b',
                         titleFont: { size: 12, family: 'Plus Jakarta Sans', weight: 'bold' },
-                        bodyFont: { size: 12, family: 'Plus Jakarta Sans' },
-                        padding: 10,
-                        cornerRadius: 10,
-                        displayColors: false,
+                        bodyFont: { size: 11, family: 'Plus Jakarta Sans' },
+                        padding: 12,
+                        cornerRadius: 12,
+                        displayColors: true,
                         callbacks: {
                             label: function(context) {
-                                return context.parsed.y.toLocaleString('id-ID') + ' ' + metric.unit;
+                                return ' ' + context.dataset.label + ': ' + context.parsed.y.toLocaleString('id-ID') + ' ' + metric.unit;
+                            },
+                            afterBody: function(items) {
+                                if (items.length >= 2) {
+                                    let masuk = 0;
+                                    let keluar = 0;
+                                    let hasMasuk = false;
+                                    let hasKeluar = false;
+                                    items.forEach(function(it) {
+                                        if (it.datasetIndex === 0) { masuk = it.parsed.y; hasMasuk = true; }
+                                        if (it.datasetIndex === 1) { keluar = it.parsed.y; hasKeluar = true; }
+                                    });
+                                    if (hasMasuk && hasKeluar) {
+                                        const selisih = Math.round((masuk - keluar) * 10) / 10;
+                                        const prefix = selisih > 0 ? '+' : '';
+                                        return '\n● Selisih (Masuk - Keluar): ' + prefix + selisih.toLocaleString('id-ID') + ' ' + metric.unit;
+                                    }
+                                }
+                                return '';
                             }
                         }
                     }
@@ -456,7 +667,7 @@
                         }
                     },
                     y: {
-                        beginAtZero: false,
+                        beginAtZero: true,
                         grid: {
                             color: '#f1f5f9'
                         },
@@ -476,6 +687,7 @@
     function updateChartMetric(val) {
         const metric = chartDataSets[val];
         document.getElementById('chartTitle').textContent = metric.title;
+        document.getElementById('chartSubtitle').textContent = metric.subtitle;
         document.getElementById('chartUnitBadge').textContent = metric.unit;
         renderTrendChart(val);
     }
