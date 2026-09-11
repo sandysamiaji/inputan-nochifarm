@@ -108,6 +108,102 @@ class MasterController extends Controller
     }
 
     /**
+     * Simpan Klotter (Flock) Baru
+     */
+    public function storeFlock(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'code' => 'nullable|string|max:50',
+            'start_date' => 'nullable|date',
+            'initial_population' => 'required|integer|min:0',
+            'breed' => 'nullable|string|max:100',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        if (empty($validated['code'])) {
+            $count = Flock::count() + 1;
+            $validated['code'] = 'K' . $count;
+        }
+
+        $validated['current_population'] = $validated['initial_population'];
+        $validated['is_active'] = true;
+
+        $flock = Flock::create($validated);
+
+        return back()->with('success', "Klotter {$flock->name} berhasil ditambahkan!");
+    }
+
+    /**
+     * Update Klotter (Flock)
+     */
+    public function updateFlock(Request $request, $id)
+    {
+        $flock = Flock::findOrFail($id);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'code' => 'nullable|string|max:50',
+            'start_date' => 'nullable|date',
+            'initial_population' => 'required|integer|min:0',
+            'breed' => 'nullable|string|max:100',
+            'notes' => 'nullable|string|max:500',
+            'is_active' => 'nullable|boolean',
+        ]);
+
+        $validated['is_active'] = $request->has('is_active') ? true : false;
+
+        $flock->update($validated);
+
+        return back()->with('success', "Data Klotter {$flock->name} berhasil diperbarui!");
+    }
+
+    /**
+     * Hapus / Nonaktifkan Klotter (Flock)
+     */
+    public function destroyFlock($id)
+    {
+        $flock = Flock::with('coops')->findOrFail($id);
+
+        if ($flock->coops()->count() > 0) {
+            $flock->update(['is_active' => false]);
+            return back()->with('success', "Klotter {$flock->name} dinonaktifkan karena memiliki data blok kandang.");
+        }
+
+        $flock->delete();
+        return back()->with('success', "Klotter {$flock->name} berhasil dihapus!");
+    }
+
+    /**
+     * Simpan Coop / Blok Kandang Baru
+     */
+    public function storeCoop(Request $request)
+    {
+        $validated = $request->validate([
+            'flock_id' => 'required|exists:flocks,id',
+            'name' => 'required|string|max:255',
+            'capacity' => 'required|integer|min:1',
+            'active_chickens' => 'required|integer|min:0',
+            'chicken_age_weeks' => 'required|integer|min:1',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $validated['is_active'] = true;
+
+        $coop = Coop::create($validated);
+
+        // Perbarui total current_population pada Flock
+        $flock = Flock::find($validated['flock_id']);
+        if ($flock) {
+            $flock->update([
+                'current_population' => (int) $flock->coops()->sum('active_chickens')
+            ]);
+        }
+
+        return back()->with('success', "Blok {$coop->name} berhasil ditambahkan ke " . ($flock ? $flock->name : 'Klotter') . "!");
+    }
+
+    /**
      * Update data Coop / Blok
      */
     public function updateCoop(Request $request, $id)
@@ -115,15 +211,42 @@ class MasterController extends Controller
         $coop = Coop::findOrFail($id);
 
         $validated = $request->validate([
+            'flock_id' => 'nullable|exists:flocks,id',
             'name' => 'required|string|max:255',
             'capacity' => 'required|integer|min:1',
             'active_chickens' => 'required|integer|min:0',
             'chicken_age_weeks' => 'required|integer|min:1',
+            'notes' => 'nullable|string|max:500',
         ]);
 
         $coop->update($validated);
 
+        if ($coop->flock_id) {
+            $flock = Flock::find($coop->flock_id);
+            if ($flock) {
+                $flock->update([
+                    'current_population' => (int) $flock->coops()->sum('active_chickens')
+                ]);
+            }
+        }
+
         return back()->with('success', "Data {$coop->name} berhasil diperbarui!");
+    }
+
+    /**
+     * Hapus / Nonaktifkan Coop / Blok
+     */
+    public function destroyCoop($id)
+    {
+        $coop = Coop::findOrFail($id);
+
+        if ($coop->eggProductions()->exists() || $coop->feedConsumptions()->exists()) {
+            $coop->update(['is_active' => false]);
+            return back()->with('success', "Blok {$coop->name} dinonaktifkan karena memiliki riwayat transaksi kandang.");
+        }
+
+        $coop->delete();
+        return back()->with('success', "Blok {$coop->name} berhasil dihapus!");
     }
 
     /**

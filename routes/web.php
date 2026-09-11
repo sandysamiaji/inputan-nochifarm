@@ -48,7 +48,12 @@ Route::prefix('master')->name('master.')->group(function () {
     Route::get('/info-farm', [MasterController::class, 'infoFarm'])->name('info-farm');
     Route::post('/info-farm/update', [MasterController::class, 'updateInfoFarm'])->name('info-farm.update');
     Route::get('/flocks', [MasterController::class, 'flocks'])->name('flocks');
+    Route::post('/flocks/store', [MasterController::class, 'storeFlock'])->name('flocks.store');
+    Route::put('/flocks/{id}/update', [MasterController::class, 'updateFlock'])->name('flocks.update');
+    Route::delete('/flocks/{id}/destroy', [MasterController::class, 'destroyFlock'])->name('flocks.destroy');
+    Route::post('/coops/store', [MasterController::class, 'storeCoop'])->name('coops.store');
     Route::put('/coops/{id}/update', [MasterController::class, 'updateCoop'])->name('coops.update');
+    Route::delete('/coops/{id}/destroy', [MasterController::class, 'destroyCoop'])->name('coops.destroy');
     Route::get('/standards', [MasterController::class, 'standards'])->name('standards');
     Route::post('/standards/update', [MasterController::class, 'updateStandards'])->name('standards.update');
     Route::get('/medicines', [MasterController::class, 'medicines'])->name('medicines');

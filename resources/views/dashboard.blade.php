@@ -256,18 +256,32 @@
                     </div>
 
                     <!-- 5. Input Vaksin & Obat -->
-                    <div onclick="openModal('modalVaksin')" class="farm-card farm-card-interactive p-4 flex items-center justify-between sm:col-span-2 xl:col-span-2">
+                    <div onclick="openModal('modalVaksin')" class="farm-card farm-card-interactive p-4 flex items-center justify-between">
                         <div class="flex items-center gap-3">
                             <div class="w-11 h-11 rounded-2xl bg-maroon-50 text-maroon-800 flex items-center justify-center shrink-0 border border-maroon-200 shadow-xs">
                                 <i data-lucide="syringe" class="w-6 h-6 stroke-[2.2]"></i>
                             </div>
                             <div>
                                 <h4 class="text-sm font-bold text-slate-900">Input Vaksin & Obat</h4>
-                                <p class="text-xs text-slate-500">Catat vaksinasi, vitamin, dan antibiotik harian</p>
+                                <p class="text-xs text-slate-500">Catat vaksinasi & vitamin</p>
                             </div>
                         </div>
                         <i data-lucide="chevron-right" class="w-5 h-5 text-slate-400"></i>
                     </div>
+
+                    <!-- 6. Input / Kelola Blok & Klotter -->
+                    <a href="{{ route('master.flocks') }}" class="farm-card farm-card-interactive p-4 flex items-center justify-between group">
+                        <div class="flex items-center gap-3">
+                            <div class="w-11 h-11 rounded-2xl bg-purple-50 text-purple-700 flex items-center justify-center shrink-0 border border-purple-200 shadow-xs group-hover:scale-105 transition-transform">
+                                <i data-lucide="layers" class="w-6 h-6 stroke-[2.2]"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-bold text-slate-900 group-hover:text-purple-700 transition-colors">Blok & Klotter</h4>
+                                <p class="text-xs text-slate-500">Kelola kandang, populasi & umur</p>
+                            </div>
+                        </div>
+                        <i data-lucide="chevron-right" class="w-5 h-5 text-slate-400 group-hover:text-purple-700 transition-colors"></i>
+                    </a>
 
                 </div>
             </div>
@@ -279,7 +293,13 @@
                         <div class="w-2.5 h-2.5 rounded-full bg-emerald-600"></div>
                         <h3 class="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-800">STATUS BLOK KANDANG AKTIF</h3>
                     </div>
-                    <span class="text-xs text-slate-500 font-semibold">{{ $coops->count() }} Blok Terdaftar</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-500 font-semibold hidden sm:inline">{{ $coops->count() }} Blok Terdaftar</span>
+                        <a href="{{ route('master.flocks') }}" class="text-xs text-maroon-800 hover:text-maroon-900 font-bold flex items-center gap-1 bg-maroon-50 hover:bg-maroon-100 px-2.5 py-1 rounded-lg border border-maroon-200 transition-colors">
+                            <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+                            <span>Kelola Blok & Klotter</span>
+                        </a>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -505,6 +525,10 @@
 
             <!-- 3. Estimasi Hasil Otomatis -->
             <div class="p-3.5 bg-amber-50/80 border border-amber-200 rounded-xl space-y-2 text-xs sm:text-sm">
+                <div class="flex justify-between items-center text-slate-700 font-medium">
+                    <span>Produktivitas Hen-Day (HD):</span>
+                    <span id="dashCalcHD" class="px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 font-black text-xs sm:text-sm">0%</span>
+                </div>
                 <div class="flex justify-between text-slate-600 font-medium">
                     <span>Telur Baik (Estimasi):</span>
                     <b id="calcGoodEggs" class="text-slate-900 font-bold">0 Butir</b>
@@ -855,19 +879,23 @@
         }
     }
 
+    let dashSelectedCoopActive = 0;
+
     // Update info blok saat memilih blok di modal produksi
     function updateCoopInfo(selectElem) {
         const selected = selectElem.options[selectElem.selectedIndex];
         const infoBox = document.getElementById('coopInfoBox');
         if (selected && selected.value) {
-            const active = selected.getAttribute('data-active') || '0';
+            dashSelectedCoopActive = parseInt(selected.getAttribute('data-active') || '0');
             const age = selected.getAttribute('data-age') || '0';
-            document.getElementById('coopActiveText').textContent = 'Kapasitas Aktif: ' + Number(active).toLocaleString('id-ID') + ' Ekor';
+            document.getElementById('coopActiveText').textContent = 'Kapasitas Aktif: ' + Number(dashSelectedCoopActive).toLocaleString('id-ID') + ' Ekor';
             document.getElementById('coopAgeText').textContent = age + ' Minggu';
             infoBox.classList.remove('hidden');
         } else {
+            dashSelectedCoopActive = 0;
             infoBox.classList.add('hidden');
         }
+        calculateEggEstimates();
     }
 
     // Kalkulasi estimasi butir baik dan peti secara otomatis
@@ -881,6 +909,25 @@
         document.getElementById('calcGoodEggs').textContent = good.toLocaleString('id-ID') + ' Butir';
         document.getElementById('calcCrates').textContent = crates.toLocaleString('id-ID') + ' Peti';
         document.getElementById('prodCratesCount').value = crates;
+
+        // Hitung Hen-Day (HD %)
+        const hdElem = document.getElementById('dashCalcHD');
+        if (hdElem) {
+            if (dashSelectedCoopActive > 0 && total > 0) {
+                const hd = ((total / dashSelectedCoopActive) * 100).toFixed(1);
+                hdElem.textContent = hd + '%';
+                if (hd >= 85) {
+                    hdElem.className = "px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-black text-xs sm:text-sm";
+                } else if (hd >= 70) {
+                    hdElem.className = "px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 font-black text-xs sm:text-sm";
+                } else {
+                    hdElem.className = "px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 font-black text-xs sm:text-sm";
+                }
+            } else {
+                hdElem.textContent = '0%';
+                hdElem.className = "px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-black text-xs sm:text-sm";
+            }
+        }
     }
 </script>
 @endpush
